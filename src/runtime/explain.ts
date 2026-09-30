@@ -3,9 +3,12 @@ import type { RenderResult } from './types';
 
 /** One text block for logs. Full HTML stays on each part trace. */
 export function explain(result: RenderResult | RenderError): string {
-  const report = result instanceof RenderError ? fromError(result) : result;
+  const thrown = result instanceof RenderError;
+  const report = thrown ? fromError(result) : result;
   const lines = [
-    `${report.templateId}: ${report.ok ? 'ok' : 'failed'} (${report.parts.length} parts, ${report.html.length} chars)`,
+    thrown
+      ? result.message
+      : `${report.templateId}: ${report.ok ? 'ok' : 'failed'} (${report.parts.length} parts, ${report.html.length} chars)`,
   ];
   for (const part of report.parts) {
     const detail = part.error ? ` ${part.error.name}: ${part.error.message}` : '';

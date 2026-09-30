@@ -1,34 +1,41 @@
 # @llazyemail/template-runtime-display
 
-> Pure functions that return HTML email fragments. No runtime dependencies. Node 24+. Named exports only.
+> Stateless runtime that renders a whole HTML email from named parts and reports the part that broke. No runtime dependencies. Node 24+. Named exports only. No template registry.
 
 - Repo: https://github.com/LLazyEmail/template-runtime-display
-- npm: https://www.npmjs.com/package/@llazyemail/template-runtime-display
+- Registry: https://npm.pkg.github.com (scope `@llazyemail`)
 - README: https://github.com/LLazyEmail/template-runtime-display/blob/main/README.md
 - Agent guide: https://github.com/LLazyEmail/template-runtime-display/blob/main/AGENTS.md
 - Full API: https://github.com/LLazyEmail/template-runtime-display/blob/main/llms-full.txt
 - Sample: https://github.com/LLazyEmail/template-runtime-display/blob/main/examples/compose.ts
 
-## Public surface
+## Render
 
 ```ts
-import { document, footer, head, main } from '@llazyemail/template-runtime-display';
+import { explain, renderEmail, slot } from '@llazyemail/template-runtime-display';
 
-document({
-  headHtml: head({ title: 'Weekly update', preview: 'Three things that shipped' }),
-  mainHtml: main({
+const result = renderEmail(
+  {
+    id: 'weekly',
+    parts: [{ id: 'note', render: (ctx) => slot(ctx, 'note') }],
+  },
+  {
+    title: 'Weekly update',
+    preview: 'Three things that shipped',
     heading: 'Weekly update',
     bodyText: 'Three things that shipped.',
     ctaLabel: 'Read',
     ctaUrl: 'https://example.com/update',
-  }),
-  footerHtml: footer({
     companyName: 'LLazyEmail',
     unsubscribeUrl: 'https://example.com/unsubscribe',
-  }),
-});
+  },
+  { onError: 'collect', slots: { note: '<p>Custom note</p>' } },
+);
+
+explain(result);
+result.html;
 ```
 
-Also exported: `body({ mainHtml, footerHtml })`, `content({ content })`.
+`renderTemplate` and `defineTemplate` are the same runtime without the email shell. `renderMany` batches jobs that share one props type. Default `onError` is `throw` (`RenderError` with `partId`, `trace`, and `cause`). `collect` keeps going and sets `ok: false`.
 
-Omitted strings are empty. The button needs both `ctaLabel` and `ctaUrl`. Unsubscribe needs `unsubscribeUrl`. Props are raw HTML. `document` is deterministic and uses `<html lang="en">`.
+Fragment helpers `head`, `main`, `footer`, `body`, `content`, and `document` return strings. Omitted strings are empty. The button needs both `ctaLabel` and `ctaUrl`. Unsubscribe needs `unsubscribeUrl`. Props and slots are raw HTML. `document` uses `<html lang="en">`.

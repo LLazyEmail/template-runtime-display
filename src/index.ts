@@ -1,4 +1,11 @@
-export { defineTemplate, hasSlot, renderMany, renderTemplate, slot, RenderError } from './runtime/render';
+export {
+  defineTemplate,
+  hasSlot,
+  renderMany,
+  renderTemplate,
+  slot,
+  RenderError,
+} from './runtime/render';
 export type {
   PartFailure,
   PartStatus,

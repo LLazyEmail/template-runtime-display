@@ -35,14 +35,19 @@ export class RenderError extends Error {
   }
 }
 
-/** Validate and copy a template so later renders keep the checked part list. */
+/**
+ * Validate, copy, and freeze a template. Later edits to the caller's part
+ * array do not change a template that has already been defined.
+ */
 export function defineTemplate<TProps>(template: Template<TProps>): Template<TProps> {
   assertTemplate(template);
-  return {
+  return Object.freeze({
     id: template.id,
-    parts: [...template.parts],
+    parts: Object.freeze(
+      template.parts.map((part) => Object.freeze({ id: part.id, render: part.render })),
+    ),
     compose: template.compose,
-  };
+  });
 }
 
 /**
@@ -83,12 +88,15 @@ export function renderTemplate<TProps>(
         for (const later of template.parts.slice(index + 1)) {
           trace.push(skippedTrace(later.id));
         }
-        throw new RenderError(`template "${template.id}" failed at part "${part.id}": ${failure.message}`, {
-          templateId: template.id,
-          partId: part.id,
-          trace,
-          cause: error,
-        });
+        throw new RenderError(
+          `template "${template.id}" failed at part "${part.id}": ${failure.message}`,
+          {
+            templateId: template.id,
+            partId: part.id,
+            trace: publish(trace),
+            cause: error,
+          },
+        );
       }
     }
   }
@@ -123,7 +131,9 @@ export function slot<TProps>(ctx: RenderContext<TProps>, id: string): string {
     return html;
   }
   if (typeof value === 'string') return value;
-  throw new TypeError(`slot "${id}" is ${value === null ? 'null' : typeof value}, expected a string or function`);
+  throw new TypeError(
+    `slot "${id}" is ${value === null ? 'null' : typeof value}, expected a string or function`,
+  );
 }
 
 /** True when the caller passed this slot, including an empty string. */
@@ -144,8 +154,7 @@ function finish<TProps>(
     if (typeof html !== 'string') {
       throw new TypeError(`compose returned ${typeof html}, expected a string`);
     }
-    const result: RenderResult = { templateId: template.id, ok, html, parts: trace };
-    return result;
+    return { templateId: template.id, ok, html, parts: publish(trace) };
   } catch (error) {
     const failure = describeError(error);
     if (onError === 'collect') {
@@ -153,16 +162,19 @@ function finish<TProps>(
         templateId: template.id,
         ok: false,
         html: '',
-        parts: trace,
+        parts: publish(trace),
         composeError: failure,
       };
     }
-    throw new RenderError(`template "${template.id}" failed at part "compose": ${failure.message}`, {
-      templateId: template.id,
-      partId: RESERVED_PART_ID,
-      trace,
-      cause: error,
-    });
+    throw new RenderError(
+      `template "${template.id}" failed at part "compose": ${failure.message}`,
+      {
+        templateId: template.id,
+        partId: RESERVED_PART_ID,
+        trace: publish(trace),
+        cause: error,
+      },
+    );
   }
 }
 
@@ -199,7 +211,11 @@ function assertTemplate<TProps>(template: Template<TProps>): void {
   }
 }
 
-function assertPart<TProps>(templateId: string, part: TemplatePart<TProps>, seen: Set<string>): void {
+function assertPart<TProps>(
+  templateId: string,
+  part: TemplatePart<TProps>,
+  seen: Set<string>,
+): void {
   if (part.id === '') {
     throw new RenderError(`template "${templateId}" has an empty part id`, {
       templateId,
@@ -249,4 +265,13 @@ function skippedTrace(id: string): PartTrace {
 function describeError(error: unknown): PartFailure {
   if (error instanceof Error) return { name: error.name, message: error.message };
   return { name: 'Error', message: String(error) };
+}
+
+/** Freeze the rows a caller may store while other templates keep rendering. */
+function publish(trace: PartTrace[]): readonly PartTrace[] {
+  for (const part of trace) {
+    if (part.error !== undefined) Object.freeze(part.error);
+    Object.freeze(part);
+  }
+  return Object.freeze(trace);
 }

@@ -69,13 +69,14 @@ export function defineEmailTemplate(input: EmailTemplate): Template<EmailProps> 
       },
     ],
     compose: (parts) => {
-      const extraHtml = extras.map((part) => parts[part.id] ?? '').join('\n');
-      const mainHtml = extras.length > 0 ? `${parts['main'] ?? ''}\n${extraHtml}` : (parts['main'] ?? '');
-      return document({
-        headHtml: parts['head'] ?? '',
-        mainHtml,
-        footerHtml: parts['footer'] ?? '',
-      });
+      // Read the shell before custom ids. Key order is the part list.
+      const headHtml = readPart(parts, 'head');
+      const mainPiece = readPart(parts, 'main');
+      const extraIds = Object.keys(parts).filter((id) => !SHELL_PARTS.has(id));
+      const extraHtml = extraIds.map((id) => readPart(parts, id)).join('\n');
+      const footerHtml = readPart(parts, 'footer');
+      const mainHtml = extraIds.length > 0 ? `${mainPiece}\n${extraHtml}` : mainPiece;
+      return document({ headHtml, mainHtml, footerHtml });
     },
   });
 }
@@ -94,7 +95,19 @@ function isTemplate(value: EmailTemplate | Template<EmailProps>): value is Templ
   return 'compose' in value && typeof value.compose === 'function';
 }
 
-function pickDefined<T extends Record<string, string | undefined>>(values: T): {
+const SHELL_PARTS = new Set(['head', 'main', 'footer']);
+
+function readPart(parts: Readonly<Record<string, string>>, id: string): string {
+  const html = parts[id];
+  if (typeof html !== 'string') {
+    throw new TypeError(`email shell is missing part "${id}"`);
+  }
+  return html;
+}
+
+function pickDefined<T extends Record<string, string | undefined>>(
+  values: T,
+): {
   [K in keyof T]?: string;
 } {
   const picked: { [K in keyof T]?: string } = {};

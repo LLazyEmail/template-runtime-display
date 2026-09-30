@@ -1,11 +1,11 @@
 # @llazyemail/template-runtime-display
 
-Pure functions that return HTML fragments for an email document: `head`, `main`, `body`, `footer`, `content`, and the full `document`.
+Standalone runtime that renders a whole HTML email from named parts, and a per-part trace when custom code breaks. The email shell is a preset. Any other document is a `Template` you define yourself.
 
 [![CI](https://github.com/LLazyEmail/template-runtime-display/actions/workflows/ci.yml/badge.svg)](https://github.com/LLazyEmail/template-runtime-display/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Requires **Node.js 24+**. No runtime dependencies. Strings you pass are interpolated as HTML.
+Requires **Node.js 24+**. No runtime dependencies. No template registry. Strings you pass are interpolated as HTML.
 
 - Agent guide: [AGENTS.md](./AGENTS.md)
 - Short index: [llms.txt](./llms.txt)
@@ -24,29 +24,71 @@ A GitHub Release on `main` runs [`.github/workflows/publish.yml`](./.github/work
 
 ESM, CommonJS, and a script-tag build (`dist/index.global.js`, global `TemplateRuntimeDisplay`) are all published.
 
-## Compose a letter
+## Render an email
 
 ```ts
-import { document, footer, head, main } from '@llazyemail/template-runtime-display';
+import { renderEmail, slot } from '@llazyemail/template-runtime-display';
 
-const html = document({
-  headHtml: head({ title: 'Weekly update', preview: 'Three things that shipped' }),
-  mainHtml: main({
+const result = renderEmail(
+  {
+    id: 'weekly',
+    parts: [{ id: 'note', render: (ctx) => slot(ctx, 'note') }],
+  },
+  {
+    title: 'Weekly update',
+    preview: 'Three things that shipped',
     heading: 'Weekly update',
     bodyText: 'Three things that shipped.',
     ctaLabel: 'Read',
     ctaUrl: 'https://example.com/update',
-  }),
-  footerHtml: footer({
     companyName: 'LLazyEmail',
     unsubscribeUrl: 'https://example.com/unsubscribe',
-  }),
-});
+  },
+  { slots: { note: '<p>Custom note</p>' } },
+);
+
+result.html;
 ```
 
-`document` always starts with `<!DOCTYPE html>` and uses `<html lang="en">`. The same props always return the same string.
+`result.html` starts with `<!DOCTYPE html>` and uses `<html lang="en">`. The same template, props, and slots return the same HTML. Custom parts sit inside `<body>` after `main` and before `footer`. A missing slot renders as empty. A slot named `head`, `main`, or `footer` replaces that region.
 
-## API
+`defineEmailTemplate` returns the `Template` when you want to keep it and render it more than once. `renderEmail` accepts that template or the input object above.
+
+## See which part broke
+
+The default is `onError: 'throw'`. The thrown `RenderError` carries `templateId`, `partId`, `cause`, and a trace where later parts are `skipped`. `explain` prints that error.
+
+```ts
+import { explain, renderEmail } from '@llazyemail/template-runtime-display';
+
+const result = renderEmail(template, props, { onError: 'collect' });
+explain(result);
+```
+
+`collect` records the broken part, uses `''` for it, and continues. `result.ok` is false. Full HTML for every part that ran stays on `result.parts[].html`. `renderMany` uses the same switch. In throw mode the first broken job stops the batch. Pass `collect` when one failure must not hide the rest. Jobs in one batch share a props type.
+
+## A document that is not the email shell
+
+```ts
+import { defineTemplate, renderTemplate, slot } from '@llazyemail/template-runtime-display';
+
+const page = defineTemplate<{ title: string }>({
+  id: 'page',
+  parts: [
+    { id: 'title', render: (ctx) => `<h1>${ctx.props.title}</h1>` },
+    { id: 'extra', render: (ctx) => slot(ctx, 'extra') },
+  ],
+  compose: (parts) => `<article>${parts['title'] ?? ''}${parts['extra'] ?? ''}</article>`,
+});
+
+renderTemplate(page, { title: 'Hello' }, { slots: { extra: '<p>More</p>' } });
+```
+
+`defineTemplate` copies and freezes the part list. Callers keep the catalog. The runtime keeps nothing between calls.
+
+## Fragments
+
+The email preset calls these. They stay public so a part, or a caller, can use them directly.
 
 | Function                                            | Role                                                                 |
 | --------------------------------------------------- | -------------------------------------------------------------------- |
@@ -54,12 +96,12 @@ const html = document({
 | `main({ heading?, bodyText?, ctaLabel?, ctaUrl? })` | `<main>` with an `<h1>`, a paragraph, and an optional button         |
 | `footer({ companyName?, unsubscribeUrl? })`         | `<footer>` with the company name and an optional unsubscribe link    |
 | `body({ mainHtml?, footerHtml? })`                  | `<body>` around the main and footer fragments                        |
-| `content({ content? })`                             | A `<div>` around raw HTML                                            |
+| `content({ content? })`                             | A `<div>` around raw HTML. The email shell does not call it          |
 | `document({ headHtml?, mainHtml?, footerHtml? })`   | Doctype, `<html lang="en">`, head, and body                          |
 
 Omitted strings render empty. The button is present only when both `ctaLabel` and `ctaUrl` are set. The unsubscribe link is present only when `unsubscribeUrl` is set.
 
-`bodyText` and `content` may contain inline HTML. Callers own that markup.
+`bodyText`, `content`, and slot strings may contain inline HTML. Callers own that markup.
 
 ## Scripts
 
@@ -74,13 +116,13 @@ npm run typecheck    # tsc --noEmit
 npm run lint
 npm run format       # prettier --write
 npm run format:check
-npm run generate     # write generated/letter.html with markup-generator
+npm run generate     # render a letter, print explain(), write generated/letter.html
 npm run publint
 npm run smoke        # load the ESM, CJS, and script-tag builds
 npm run check        # format, lint, typecheck, build, test, smoke, publint
 ```
 
-`markup-generator` is installed for local checks. `src/write.test.ts` renders a letter and writes it with `writeGeneratedFile`.
+`markup-generator` is installed for local checks. `src/write.test.ts` renders a letter with `renderEmail` and writes it with `writeGeneratedFile`.
 
 ## License
 

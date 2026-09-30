@@ -1,10 +1,103 @@
 # @llazyemail/template-runtime-display API
 
 Package: `@llazyemail/template-runtime-display`.
-Node 24+. Named exports only. No default export. No runtime dependencies.
+Node 24+. Named exports only. No default export. No runtime dependencies. No template registry.
 Import the package root. Builds: ESM `dist/index.js`, CJS `dist/index.cjs`, browser IIFE `dist/index.global.js` (global `TemplateRuntimeDisplay`), types `dist/index.d.ts`.
 
-Same props always return the same string. Omitted optional strings become `''`. Rendered HTML does not contain the word `undefined`. Prop values are concatenated as HTML with no escape step.
+The runtime is synchronous and stateless. Callers own templates. The same template, props, and slots return the same HTML, including whitespace. Trace `ms` may differ. Omitted optional strings become `''`. Rendered HTML does not contain the word `undefined`. Prop values and slot strings are concatenated as HTML with no escape step.
+
+## Model
+
+`Template<TProps>`:
+
+- `id: string` — non-empty. Shown on errors and in `explain`.
+- `parts` — ordered `{ id, render }`. `render(ctx) => string`.
+- `compose(parts, ctx) => string` — stitches the part record into the final document.
+
+`RenderContext<TProps>`:
+
+- `templateId`
+- `props` — the same object the caller passed, not a copy
+- `slots` — frozen shallow copy of the caller's slots
+
+`defineTemplate(template)` validates, copies each part (`id` and `render`), freezes the part list and the template, and returns that copy. Mutating the input array later does not change the defined template.
+
+Validation throws `RenderError` (`partId` is `template`, `trace` is empty) when:
+
+- the template id is empty
+- a part id is empty
+- a part id is `compose` (reserved)
+- a part id is duplicated
+- `compose` is not a function
+
+`renderTemplate` runs the same checks.
+
+Part ids are the debug names. Put each piece of custom code in its own part.
+
+## renderTemplate(template, props, options?): RenderResult
+
+`options.onError` is `'throw'` (default) or `'collect'`. `options.slots` is optional.
+
+Each part runs in order. The return value passes through these rules:
+
+- `string` — stored. Status `ok`, or `empty` when the string is `''`.
+- `null` or `undefined` — stored as `''`, status `empty`.
+- any other value — `TypeError`, status `error`.
+- a throw — status `error`. `Error` instances keep `name` and `message`. Anything else becomes `{ name: 'Error', message: String(value) }`.
+
+`throw`: the broken part is recorded, later parts are `skipped` and do not run, and `RenderError` is thrown. `message` is `template "<id>" failed at part "<partId>": <message>`. `cause` is the original throw.
+
+`collect`: the broken part is stored as `''`, later parts run, and the returned `RenderResult.ok` is false.
+
+Compose then receives `Readonly<Record<string, string>>` of the stored HTML (missing parts are absent only if compose is called by hand) and the same context. A non-string return is a `TypeError`. A compose throw uses part id `compose`. In `collect`, `html` is `''`, `ok` is false, and `composeError` is set. In `throw`, `RenderError.partId` is `compose`.
+
+`RenderResult`:
+
+- `templateId`, `ok`, `html`
+- `parts`: frozen `PartTrace[]` (`id`, `status`, `html`, `chars`, `ms`, optional `error: { name, message }`)
+- `composeError` optional, only for a collected compose failure
+
+`status` is `ok | empty | error | skipped`.
+
+## explain(result | RenderError): string
+
+One text block for logs. A `RenderError` prints `error.message` (it contains `failed at part`). A `RenderResult` prints `<templateId>: ok|failed (<n> parts, <n> chars)`. Then one line per part: `<id> <status> <chars> chars <ms>ms` plus ` <name>: <message>` when that part has an error. A collected compose failure adds `compose error <name>: <message>`. Part HTML is not inlined. Read `parts[].html`.
+
+## slot(ctx, id): string and hasSlot(ctx, id): boolean
+
+`hasSlot` uses `Object.hasOwn`. An empty string is provided. A missing slot makes `slot` return `''`.
+
+A function slot is called with the same context. `null` and `undefined` become `''`. A non-string return throws `TypeError` (`slot "<id>" returned <type>, expected a string`). A slot that is not a string or function throws `TypeError` (`slot "<id>" is null|number|..., expected a string or function`). The part that called `slot` is the part recorded on the trace.
+
+## renderMany(jobs, options?): RenderResult[]
+
+Every job shares `TProps`. A job is `{ template, props?, slots? }`. Omitted props become `{}`. `options` is only `{ onError? }`.
+
+`throw` (default) lets the first `RenderError` escape. Later jobs do not run. `collect` returns one result per job, including failures.
+
+This is the batch entry for many templates of one props shape. Different props types are separate batches. Do not add a global registry to work around that.
+
+## defineEmailTemplate(input): Template<EmailProps>
+
+`input` is `{ id, parts? }`. `parts` are custom steps. Built-in order: `head`, `main`, custom parts, `footer`. A custom part whose id is `head`, `main`, `footer`, or `compose` fails validation.
+
+Shell parts call `head`, `main`, and `footer` with only the string props that were actually passed. A slot of the same id replaces that fragment: `slot(ctx, 'head' | 'main' | 'footer')`.
+
+Compose reads rendered keys. Custom ids, in part order, are joined with `\n` and placed after `main` inside the `mainHtml` argument of `document`. With no custom parts, the HTML equals:
+
+```ts
+document({
+  headHtml: head(props),
+  mainHtml: main(props),
+  footerHtml: footer(props),
+});
+```
+
+`content()` is not called. A custom part may call it and return that string.
+
+`renderEmail(template, props = {}, options?)` accepts an `EmailTemplate` input or an already defined `Template<EmailProps>` (`compose` is a function). It returns `RenderResult`.
+
+`EmailProps` (all optional): `title`, `preview`, `heading`, `bodyText`, `ctaLabel`, `ctaUrl`, `companyName`, `unsubscribeUrl`.
 
 ## document(props?: DocumentProps): string
 
@@ -80,5 +173,7 @@ When `unsubscribeUrl` is set, the link text is `Unsubscribe`.
 ## Sources
 
 - https://github.com/LLazyEmail/template-runtime-display/blob/main/src/index.ts
+- https://github.com/LLazyEmail/template-runtime-display/blob/main/src/runtime/render.ts
+- https://github.com/LLazyEmail/template-runtime-display/blob/main/src/email.ts
 - https://github.com/LLazyEmail/template-runtime-display/blob/main/examples/compose.ts
 - https://github.com/LLazyEmail/template-runtime-display/blob/main/AGENTS.md

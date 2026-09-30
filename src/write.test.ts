@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { writeGeneratedFile } from 'markup-generator';
 import { afterEach, describe, expect, it } from 'vitest';
-import { document, footer, head, main } from './index';
+import { renderEmail } from './index';
 
 const dirs: string[] = [];
 
@@ -16,16 +16,21 @@ describe('markup-generator', () => {
     const dir = await mkdtemp(join(tmpdir(), 'template-runtime-display-'));
     dirs.push(dir);
 
-    const html = document({
-      headHtml: head({ title: 'Hi', preview: 'peek' }),
-      mainHtml: main({
+    const result = renderEmail(
+      { id: 'letter' },
+      {
+        title: 'Hi',
+        preview: 'peek',
         heading: 'Hi',
         bodyText: 'Body',
         ctaLabel: 'Go',
         ctaUrl: 'https://example.com',
-      }),
-      footerHtml: footer({ companyName: 'Acme', unsubscribeUrl: 'https://example.com/u' }),
-    });
+        companyName: 'Acme',
+        unsubscribeUrl: 'https://example.com/u',
+      },
+    );
+    expect(result.ok).toBe(true);
+    const html = result.html;
 
     const outPath = await writeGeneratedFile({
       content: html,

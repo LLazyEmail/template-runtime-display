@@ -1,22 +1,35 @@
 import { writeGeneratedFile } from 'markup-generator';
-import { document, footer, head, main } from '../dist/index.js';
+import { explain, renderEmail, slot } from '../dist/index.js';
 
-const html = document({
-  headHtml: head({ title: 'Weekly update', preview: 'Three things that shipped' }),
-  mainHtml: main({
+const result = renderEmail(
+  {
+    id: 'weekly',
+    parts: [{ id: 'note', render: (ctx) => slot(ctx, 'note') }],
+  },
+  {
+    title: 'Weekly update',
+    preview: 'Three things that shipped',
     heading: 'Weekly update',
     bodyText: 'Three things that shipped.',
     ctaLabel: 'Read',
     ctaUrl: 'https://example.com/update',
-  }),
-  footerHtml: footer({
     companyName: 'LLazyEmail',
     unsubscribeUrl: 'https://example.com/unsubscribe',
-  }),
-});
+  },
+  {
+    onError: 'collect',
+    slots: { note: '<p>Custom note</p>' },
+  },
+);
+
+console.log(explain(result));
+
+if (!result.ok) {
+  process.exit(1);
+}
 
 const outPath = await writeGeneratedFile({
-  content: html,
+  content: result.html,
   fileName: 'letter.html',
   dir: 'generated',
 });

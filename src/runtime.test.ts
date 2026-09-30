@@ -28,6 +28,21 @@ describe('defineTemplate', () => {
     expect(() => template([], undefined, '')).toThrow(/template id is empty/);
   });
 
+  it('copies and freezes the part list', () => {
+    const parts: TemplatePart<Record<string, string>>[] = [{ id: 'a', render: () => 'A' }];
+    const defined = defineTemplate({
+      id: 'demo',
+      parts,
+      compose: (rendered) => rendered['a'] ?? '',
+    });
+    parts.push({ id: 'b', render: () => 'B' });
+    const result = renderTemplate(defined, {});
+    expect(Object.isFrozen(defined)).toBe(true);
+    expect(Object.isFrozen(defined.parts)).toBe(true);
+    expect(result.html).toBe('A');
+    expect(result.parts.map((part) => part.id)).toEqual(['a']);
+  });
+
   it('rejects an empty part id, a reserved id, a duplicate id, and a missing compose', () => {
     expect(() => template([{ id: '', render: () => '' }])).toThrow(/empty part id/);
     expect(() => template([{ id: 'compose', render: () => '' }])).toThrow(/reserved/);
@@ -39,7 +54,11 @@ describe('defineTemplate', () => {
     ).toThrow(/duplicate part id "a"/);
     expect(() =>
       renderTemplate(
-        { id: 'bare', parts: [], compose: undefined as unknown as Template<Record<string, string>>['compose'] },
+        {
+          id: 'bare',
+          parts: [],
+          compose: undefined as unknown as Template<Record<string, string>>['compose'],
+        },
         {},
       ),
     ).toThrow(/missing compose/);
@@ -60,6 +79,28 @@ describe('renderTemplate', () => {
     expect(result.parts.map((part) => part.status)).toEqual(['ok', 'empty']);
     expect(result.parts[0]?.html).toBe('demo');
     expect(result.parts[0]?.ms).toBeGreaterThanOrEqual(0);
+    expect(Object.isFrozen(result.parts)).toBe(true);
+    expect(explain(result)).toContain('demo: ok');
+    expect(explain(result)).toContain('b empty');
+  });
+
+  it('passes the same props object into every part', () => {
+    const props = { label: 'A' };
+    let seen: Record<string, string> | undefined;
+    renderTemplate(
+      template([
+        {
+          id: 'a',
+          render: (ctx) => {
+            seen = ctx.props;
+            return ctx.props['label'] ?? '';
+          },
+        },
+      ]),
+      props,
+    );
+    expect(seen).toBe(props);
+    expect(seen?.['label']).toBe('A');
   });
 
   it('throws RenderError and skips parts after the broken one', () => {
@@ -68,8 +109,19 @@ describe('renderTemplate', () => {
       renderTemplate(
         template([
           { id: 'a', render: () => 'A' },
-          { id: 'bad', render: () => { throw new Error('nope'); } },
-          { id: 'later', render: () => { later += 1; return 'L'; } },
+          {
+            id: 'bad',
+            render: () => {
+              throw new Error('nope');
+            },
+          },
+          {
+            id: 'later',
+            render: () => {
+              later += 1;
+              return 'L';
+            },
+          },
         ]),
         {},
         { onError: 'throw' },
@@ -86,8 +138,11 @@ describe('renderTemplate', () => {
         ['bad', 'error'],
         ['later', 'skipped'],
       ]);
+      expect(Object.isFrozen(failure.trace)).toBe(true);
+      expect(Object.isFrozen(failure.trace[1]?.error)).toBe(true);
       expect(explain(failure)).toContain('failed at part');
       expect(explain(failure)).toContain('bad error');
+      expect(explain(failure)).toContain('later skipped');
     }
     expect(later).toBe(0);
   });
@@ -95,7 +150,12 @@ describe('renderTemplate', () => {
   it('collects a non-Error throw and still renders the following part', () => {
     const result = renderTemplate(
       template([
-        { id: 'bad', render: () => { throw 'boom'; } },
+        {
+          id: 'bad',
+          render: () => {
+            throw 'boom';
+          },
+        },
         { id: 'after', render: () => 'AFTER' },
       ]),
       {},
@@ -108,9 +168,13 @@ describe('renderTemplate', () => {
   });
 
   it('reports a non-string part return', () => {
-    const result = renderTemplate(template([{ id: 'bad', render: () => 1 as unknown as string }]), {}, {
-      onError: 'collect',
-    });
+    const result = renderTemplate(
+      template([{ id: 'bad', render: () => 1 as unknown as string }]),
+      {},
+      {
+        onError: 'collect',
+      },
+    );
     expect(result.parts[0]?.error?.message).toContain('returned number');
   });
 
@@ -122,9 +186,14 @@ describe('renderTemplate', () => {
     expect(collected.composeError?.message).toContain('returned number');
     expect(explain(collected)).toContain('compose error');
 
-    expect(() => renderTemplate(template([{ id: 'a', render: () => 'A' }], () => { throw new Error('compose broke'); }), {})).toThrow(
-      /failed at part "compose"/,
-    );
+    expect(() =>
+      renderTemplate(
+        template([{ id: 'a', render: () => 'A' }], () => {
+          throw new Error('compose broke');
+        }),
+        {},
+      ),
+    ).toThrow(/failed at part "compose"/);
   });
 });
 
@@ -165,8 +234,23 @@ describe('slots', () => {
 
 describe('renderMany', () => {
   it('renders each job on its own and keeps going when one is collected', () => {
-    const okTemplate = template([{ id: 'a', render: (ctx) => ctx.props['label'] ?? '' }], undefined, 'ok');
-    const badTemplate = template([{ id: 'bad', render: () => { throw new Error('x'); } }], undefined, 'bad');
+    const okTemplate = template(
+      [{ id: 'a', render: (ctx) => ctx.props['label'] ?? '' }],
+      undefined,
+      'ok',
+    );
+    const badTemplate = template(
+      [
+        {
+          id: 'bad',
+          render: () => {
+            throw new Error('x');
+          },
+        },
+      ],
+      undefined,
+      'bad',
+    );
     const results = renderMany(
       [
         { template: okTemplate, props: { label: 'ONE' } },
@@ -181,8 +265,32 @@ describe('renderMany', () => {
     expect(results[0]?.html).not.toBe(results[2]?.html);
   });
 
-  it('uses throw mode when no batch option is passed', () => {
-    const badTemplate = template([{ id: 'bad', render: () => { throw new Error('x'); } }]);
-    expect(() => renderMany([{ template: badTemplate, props: { label: 'Z' } }])).toThrow(RenderError);
+  it('uses throw mode when no batch option is passed and does not run later jobs', () => {
+    let later = 0;
+    const badTemplate = template([
+      {
+        id: 'bad',
+        render: () => {
+          throw new Error('x');
+        },
+      },
+    ]);
+    const laterTemplate = template(
+      [
+        {
+          id: 'later',
+          render: () => {
+            later += 1;
+            return 'L';
+          },
+        },
+      ],
+      undefined,
+      'later',
+    );
+    expect(() =>
+      renderMany([{ template: badTemplate, props: { label: 'Z' } }, { template: laterTemplate }]),
+    ).toThrow(RenderError);
+    expect(later).toBe(0);
   });
 });

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { document, footer, head, main } from './index';
+import { document, explain, footer, head, main } from './index';
 import { defineEmailTemplate, renderEmail } from './index';
 import { slot } from './index';
+import type { EmailTemplate } from './index';
 
 const props = {
   title: 'Hi',
@@ -43,31 +44,69 @@ describe('renderEmail', () => {
     );
   });
 
-  it('places a custom part after main and before footer', () => {
+  it('places custom parts after main and before footer, in order', () => {
     const html = renderEmail(
       {
         id: 'with-note',
-        parts: [{ id: 'note', render: (ctx) => slot(ctx, 'note') }],
+        parts: [
+          { id: 'note', render: (ctx) => slot(ctx, 'note') },
+          { id: 'promo', render: () => '<aside>PROMO</aside>' },
+        ],
       },
       { heading: 'H' },
-      { slots: { note: '<section>NOTE</section>' } },
+      { slots: { note: (ctx) => `<section>${ctx.templateId}</section>` } },
     ).html;
-    expect(html.indexOf('<main>')).toBeLessThan(html.indexOf('<section>NOTE</section>'));
-    expect(html.indexOf('<section>NOTE</section>')).toBeLessThan(html.indexOf('<footer>'));
+    const noteAt = html.indexOf('<section>with-note</section>');
+    const promoAt = html.indexOf('<aside>PROMO</aside>');
+    expect(html.indexOf('<main>')).toBeLessThan(noteAt);
+    expect(noteAt).toBeLessThan(promoAt);
+    expect(promoAt).toBeLessThan(html.indexOf('<footer>'));
+  });
+
+  it('renders an omitted custom slot as an empty part', () => {
+    const result = renderEmail({
+      id: 'with-note',
+      parts: [{ id: 'note', render: (ctx) => slot(ctx, 'note') }],
+    });
+    expect(result.ok).toBe(true);
+    expect(result.html).not.toContain('undefined');
+    expect(result.parts.find((part) => part.id === 'note')?.status).toBe('empty');
+  });
+
+  it('names a broken custom part and still finishes the shell when collecting', () => {
+    const input = {
+      id: 'broken-note',
+      parts: [
+        {
+          id: 'note',
+          render: () => {
+            throw new Error('note broke');
+          },
+        },
+      ],
+    };
+    expect(() => renderEmail(input)).toThrow(/failed at part "note": note broke/);
+
+    const result = renderEmail(input, {}, { onError: 'collect' });
+    expect(result.ok).toBe(false);
+    expect(result.html).not.toContain('undefined');
+    expect(result.parts.map((part) => [part.id, part.status])).toEqual([
+      ['head', 'ok'],
+      ['main', 'ok'],
+      ['note', 'error'],
+      ['footer', 'ok'],
+    ]);
+    expect(explain(result)).toContain('note broke');
   });
 
   it('lets a slot replace head, main, and footer', () => {
-    const html = renderEmail(
-      { id: 'replaced' },
-      props,
-      {
-        slots: {
-          head: '<head><title>Slot</title></head>',
-          main: '<main>CUSTOM</main>',
-          footer: '<footer>END</footer>',
-        },
+    const html = renderEmail({ id: 'replaced' }, props, {
+      slots: {
+        head: '<head><title>Slot</title></head>',
+        main: '<main>CUSTOM</main>',
+        footer: '<footer>END</footer>',
       },
-    ).html;
+    }).html;
     expect(html).toContain('<title>Slot</title>');
     expect(html).toContain('<main>CUSTOM</main>');
     expect(html).toContain('<footer>END</footer>');
@@ -84,8 +123,20 @@ describe('renderEmail', () => {
   });
 
   it('rejects a custom part that reuses a shell id', () => {
-    expect(() => defineEmailTemplate({ id: 'bad', parts: [{ id: 'main', render: () => '' }] })).toThrow(
-      /duplicate part id "main"/,
+    expect(() =>
+      defineEmailTemplate({ id: 'bad', parts: [{ id: 'main', render: () => '' }] }),
+    ).toThrow(/duplicate part id "main"/);
+  });
+
+  it('treats a non-function compose field as email input', () => {
+    const html = renderEmail({ id: 'plain', compose: 1 } as unknown as EmailTemplate).html;
+    expect(html.startsWith('<!DOCTYPE html>')).toBe(true);
+  });
+
+  it('names the shell part when compose is called without rendered HTML', () => {
+    const defined = defineEmailTemplate({ id: 'letter' });
+    expect(() => defined.compose({}, { templateId: 'letter', props: {}, slots: {} })).toThrow(
+      /missing part "head"/,
     );
   });
 });

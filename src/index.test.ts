@@ -91,6 +91,7 @@ describe('example', () => {
     expect(sampleHtml).toContain('href="https://example.com/update"');
     expect(sampleHtml).toContain('href="https://example.com/unsubscribe"');
     expect(sampleHtml).toContain('LLazyEmail');
+    expect(sampleHtml).toContain('<p>Custom note</p>');
     expect(sampleHtml).not.toContain('undefined');
   });
 });

@@ -1,7 +1,7 @@
 {
   "name": "@llazyemail/template-runtime-display",
-  "version": "0.1.0",
-  "description": "HTML fragments for an email document: head, main, body, footer, content, and the full document.",
+  "version": "0.2.0",
+  "description": "Standalone runtime that renders a whole HTML email from named parts and records which part broke.",
   "type": "module",
   "license": "MIT",
   "author": "LLazyEmail",
@@ -82,6 +82,8 @@
     "html",
     "template",
     "newsletter",
+    "runtime",
+    "debug",
     "llazyemail",
     "esm"
   ]
