@@ -1,0 +1,44 @@
+# Lint, format, typecheck, build, and test on Node 24.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Node 24
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install
+        run: npm ci --no-audit --no-fund
+
+      - name: Lint, format, typecheck, build, test
+        run: |
+          npm run format:check
+          npm run lint
+          npm run typecheck
+          npm run build
+          npm run test:coverage
+          npm run smoke
+          npm run publint

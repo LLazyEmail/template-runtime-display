@@ -6,9 +6,7 @@ export interface FooterProps {
 }
 
 export function footer({ companyName, unsubscribeUrl }: FooterProps = {}): string {
-  const unsubscribe = unsubscribeUrl
-    ? `<a href="${unsubscribeUrl}">Unsubscribe</a>`
-    : '';
+  const unsubscribe = unsubscribeUrl ? `<a href="${unsubscribeUrl}">Unsubscribe</a>` : '';
 
   return `
     <footer>

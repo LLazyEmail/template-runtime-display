@@ -1,0 +1,84 @@
+# @llazyemail/template-runtime-display API
+
+Package: `@llazyemail/template-runtime-display`.
+Node 24+. Named exports only. No default export. No runtime dependencies.
+Import the package root. Builds: ESM `dist/index.js`, CJS `dist/index.cjs`, browser IIFE `dist/index.global.js` (global `TemplateRuntimeDisplay`), types `dist/index.d.ts`.
+
+Same props always return the same string. Omitted optional strings become `''`. Rendered HTML does not contain the word `undefined`. Prop values are concatenated as HTML with no escape step.
+
+## document(props?: DocumentProps): string
+
+`DocumentProps` is `BodyProps` plus `headHtml`.
+
+```ts
+document({
+  headHtml: head({ title: 'Hi', preview: 'peek' }),
+  mainHtml: main({ heading: 'Hi', bodyText: 'Body', ctaLabel: 'Go', ctaUrl: 'https://example.com' }),
+  footerHtml: footer({ companyName: 'Acme', unsubscribeUrl: 'https://example.com/u' }),
+});
+```
+
+Shape:
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+{headHtml}
+<body>
+{mainHtml}
+{footerHtml}
+</body>
+</html>
+```
+
+`lang` is fixed to `en`. `document()` with no props is a shell: doctype, html, empty head slot, empty body.
+
+## head(props?: HeadProps): string
+
+| Prop | When omitted |
+|---|---|
+| `title` | empty `<title></title>` |
+| `preview` | empty hidden div |
+
+Always emits `<meta charset="utf-8">`, the viewport meta, `<title>`, and `<div style="display:none;max-height:0;overflow:hidden;">`.
+
+## main(props?: MainProps): string
+
+| Prop | When omitted |
+|---|---|
+| `heading` | empty `<h1>` |
+| `bodyText` | empty `<p>`. May contain inline HTML |
+| `ctaLabel` | button omitted unless `ctaUrl` is set too |
+| `ctaUrl` | button omitted unless `ctaLabel` is set too |
+
+The button is one `<a>` with inline styles. Either prop alone leaves the anchor out.
+
+## footer(props?: FooterProps): string
+
+| Prop | When omitted |
+|---|---|
+| `companyName` | empty `<p>` |
+| `unsubscribeUrl` | no unsubscribe link |
+
+When `unsubscribeUrl` is set, the link text is `Unsubscribe`.
+
+## body(props?: BodyProps): string
+
+| Prop | When omitted |
+|---|---|
+| `mainHtml` | empty string inside `<body>` |
+| `footerHtml` | empty string inside `<body>` |
+
+## content(props?: ContentProps): string
+
+| Prop | When omitted |
+|---|---|
+| `content` | empty `<div>` |
+
+`content` is raw HTML placed in the div. Callers insert the result where they want it. `document` does not call `content` or `main` itself.
+
+## Sources
+
+- https://github.com/LLazyEmail/template-runtime-display/blob/main/src/index.ts
+- https://github.com/LLazyEmail/template-runtime-display/blob/main/examples/compose.ts
+- https://github.com/LLazyEmail/template-runtime-display/blob/main/AGENTS.md

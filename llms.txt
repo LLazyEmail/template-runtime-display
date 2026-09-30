@@ -1,0 +1,34 @@
+# @llazyemail/template-runtime-display
+
+> Pure functions that return HTML email fragments. No runtime dependencies. Node 24+. Named exports only.
+
+- Repo: https://github.com/LLazyEmail/template-runtime-display
+- npm: https://www.npmjs.com/package/@llazyemail/template-runtime-display
+- README: https://github.com/LLazyEmail/template-runtime-display/blob/main/README.md
+- Agent guide: https://github.com/LLazyEmail/template-runtime-display/blob/main/AGENTS.md
+- Full API: https://github.com/LLazyEmail/template-runtime-display/blob/main/llms-full.txt
+- Sample: https://github.com/LLazyEmail/template-runtime-display/blob/main/examples/compose.ts
+
+## Public surface
+
+```ts
+import { document, footer, head, main } from '@llazyemail/template-runtime-display';
+
+document({
+  headHtml: head({ title: 'Weekly update', preview: 'Three things that shipped' }),
+  mainHtml: main({
+    heading: 'Weekly update',
+    bodyText: 'Three things that shipped.',
+    ctaLabel: 'Read',
+    ctaUrl: 'https://example.com/update',
+  }),
+  footerHtml: footer({
+    companyName: 'LLazyEmail',
+    unsubscribeUrl: 'https://example.com/unsubscribe',
+  }),
+});
+```
+
+Also exported: `body({ mainHtml, footerHtml })`, `content({ content })`.
+
+Omitted strings are empty. The button needs both `ctaLabel` and `ctaUrl`. Unsubscribe needs `unsubscribeUrl`. Props are raw HTML. `document` is deterministic and uses `<html lang="en">`.

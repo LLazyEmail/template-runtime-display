@@ -5,7 +5,7 @@ export interface BodyProps {
   footerHtml?: string;
 }
 
-export function body({ mainHtml, footerHtml }: BodyProps = {}): string {
+export function body({ mainHtml = '', footerHtml = '' }: BodyProps = {}): string {
   return `<body>
 ${mainHtml}
 ${footerHtml}

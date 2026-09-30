@@ -6,10 +6,11 @@ export interface DocumentProps extends BodyProps {
   headHtml?: string;
 }
 
-export function document(props: DocumentProps = {}): string {
+/** Full HTML document. `lang` is `en`. Omitted fragments are empty strings. */
+export function document({ headHtml = '', ...rest }: DocumentProps = {}): string {
   return `<!DOCTYPE html>
 <html lang="en">
-${props.headHtml}
-${body(props)}
+${headHtml}
+${body(rest)}
 </html>`;
 }

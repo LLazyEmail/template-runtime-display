@@ -1,0 +1,66 @@
+# Publish @llazyemail/template-runtime-display to GitHub Packages.
+#
+# Runs when a GitHub Release is published, and when someone starts the
+# workflow by hand. A manual run publishes unless "Pack only" is checked.
+# GITHUB_TOKEN is provided by Actions. The package scope must stay @llazyemail.
+
+name: Publish to GitHub Packages
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Pack only (do not publish)
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: github-packages-publish
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    name: Build, test, and publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          registry-url: https://npm.pkg.github.com
+          scope: '@llazyemail'
+          always-auth: true
+
+      - name: Install
+        run: npm ci --no-audit --no-fund
+
+      - name: Lint, format, typecheck, build, test
+        run: |
+          npm run format:check
+          npm run lint
+          npm run typecheck
+          npm run build
+          npm run test:coverage
+          npm run smoke
+          npm run publint
+
+      - name: Show pack contents
+        run: npm pack --dry-run
+
+      - name: Publish to GitHub Packages
+        if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.dry_run == false)
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm publish --access public

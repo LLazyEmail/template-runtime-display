@@ -3,28 +3,86 @@
   "version": "0.1.0",
   "description": "HTML fragments for an email document: head, main, body, footer, content, and the full document.",
   "type": "module",
-  "main": "./dist/index.js",
+  "license": "MIT",
+  "author": "LLazyEmail",
+  "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
     }
   },
-  "files": ["dist", "README.md", "LICENSE"],
+  "files": [
+    "dist",
+    "examples",
+    "README.md",
+    "LICENSE",
+    "AGENTS.md",
+    "llms.txt",
+    "llms-full.txt"
+  ],
   "sideEffects": false,
   "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "clean": "rm -rf dist",
-    "prepublishOnly": "npm run clean && npm run build",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "clean": "node scripts/clean.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "publint": "publint",
+    "smoke": "node scripts/smoke.mjs",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "generate": "npm run build && node scripts/generate.mjs",
+    "check": "npm run format:check && npm run lint && npm run typecheck && npm run build && npm test && npm run smoke && npm run publint",
+    "prepublishOnly": "npm run check"
   },
-  "engines": { "node": ">=24" },
+  "engines": {
+    "node": ">=24"
+  },
   "devDependencies": {
-    "typescript": "^5.6.0"
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^26.6.3",
+    "@vitest/coverage-v8": "^5.0.1",
+    "eslint": "^10.11.0",
+    "eslint-config-prettier": "^10.1.8",
+    "markup-generator": "^3.2.0",
+    "prettier": "^3.9.9",
+    "publint": "^0.3.15",
+    "tsup": "^8.5.1",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.71.0",
+    "vitest": "^5.0.1"
   },
   "publishConfig": {
+    "registry": "https://npm.pkg.github.com",
     "access": "public"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/LLazyEmail/template-runtime-display.git"
+  },
+  "bugs": {
+    "url": "https://github.com/LLazyEmail/template-runtime-display/issues"
+  },
+  "homepage": "https://github.com/LLazyEmail/template-runtime-display#readme",
+  "keywords": [
+    "email",
+    "html",
+    "template",
+    "newsletter",
+    "llazyemail",
+    "esm"
+  ]
 }

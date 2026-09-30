@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { sampleHtml } from '../examples/compose';
 import { body, content, document, footer, head, main } from './index';
 
 describe('head', () => {
@@ -67,8 +68,30 @@ describe('document', () => {
   it('renders a shell when no fragments are passed', () => {
     const html = document();
     expect(html).toMatch(/^<!DOCTYPE html>/);
+    expect(html).toContain('<html lang="en">');
     expect(html).toContain('<body>');
     expect(html).toContain('</html>');
+    expect(html).not.toContain('undefined');
+  });
+});
+
+describe('body', () => {
+  it('renders an empty shell when no fragments are passed', () => {
+    const html = body();
+    expect(html).toContain('<body>');
+    expect(html).toContain('</body>');
+    expect(html).not.toContain('undefined');
+  });
+});
+
+describe('example', () => {
+  it('composes a full letter', () => {
+    expect(sampleHtml).toMatch(/^<!DOCTYPE html>/);
+    expect(sampleHtml).toContain('<title>Weekly update</title>');
+    expect(sampleHtml).toContain('href="https://example.com/update"');
+    expect(sampleHtml).toContain('href="https://example.com/unsubscribe"');
+    expect(sampleHtml).toContain('LLazyEmail');
+    expect(sampleHtml).not.toContain('undefined');
   });
 });
 
