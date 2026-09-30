@@ -1,3 +1,21 @@
+export { defineTemplate, hasSlot, renderMany, renderTemplate, slot, RenderError } from './runtime/render';
+export type {
+  PartFailure,
+  PartStatus,
+  PartTrace,
+  RenderContext,
+  RenderJob,
+  RenderOptions,
+  RenderResult,
+  SlotValue,
+  Template,
+  TemplatePart,
+} from './runtime/types';
+export { explain } from './runtime/explain';
+
+export { defineEmailTemplate, renderEmail } from './email';
+export type { EmailProps, EmailTemplate } from './email';
+
 export { head } from './head';
 export type { HeadProps } from './head';
 
