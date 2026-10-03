@@ -32,7 +32,7 @@ ESLint and Prettier both run in CI. Tests are Vitest, not Jest. `markup-generato
 ```
 src/index.ts           public exports only — consumers import the package root
 src/runtime/types.ts   template, context, trace, and job types
-src/runtime/render.ts  defineTemplate, renderTemplate, renderMany, slot, RenderError
+src/runtime/render.ts          public re-exports\nsrc/runtime/renderTemplate.ts  renderTemplate\nsrc/runtime/api.ts             defineTemplate, renderMany, slot, hasSlot, RenderError\nsrc/runtime/helpers.ts         finish, createContext, assertTemplate, traces
 src/runtime/explain.ts explain()
 src/email.ts           defineEmailTemplate, renderEmail
 src/head.ts            head()
