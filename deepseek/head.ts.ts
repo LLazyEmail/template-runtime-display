@@ -10,9 +10,7 @@ export interface HeadProps {
 }
 
 export function head({ title, preview, styles, extraHead }: HeadProps = {}): string {
-  const previewHtml = preview
-    ? `<span class="preheader">${preview}</span>`
-    : '';
+  const previewHtml = preview ? `<span class="preheader">${preview}</span>` : '';
   const stylesHtml = styles
     ? `<style type="text/css" rel="stylesheet" media="all">${styles}\n    </style>`
     : '';

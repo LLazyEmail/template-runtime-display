@@ -7,7 +7,11 @@ export interface BodyProps {
   footerHtml?: string;
 }
 
-export function body({ preheaderHtml = '', mainHtml = '', footerHtml = '' }: BodyProps = {}): string {
+export function body({
+  preheaderHtml = '',
+  mainHtml = '',
+  footerHtml = '',
+}: BodyProps = {}): string {
   return `<body>
     ${preheaderHtml}
 ${mainHtml}
