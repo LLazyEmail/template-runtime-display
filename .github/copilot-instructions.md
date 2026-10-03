@@ -15,7 +15,7 @@ npm run check
 
 ## Tests
 
-Vitest, `src/**/*.test.ts` only. Coverage via `@vitest/coverage-v8`. Executable `src` files stay at 100%. `src/index.ts` and `src/runtime/types.ts` are excluded.
+Vitest, `test/**/*.test.ts` only. Coverage via `@vitest/coverage-v8`. Executable `src` files stay at 100%. `src/index.ts` and `src/runtime/types.ts` are excluded.
 
 ## Editing
 
