@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { document, explain, footer, head, main } from './index';
-import { defineEmailTemplate, renderEmail } from './index';
-import { slot } from './index';
-import type { EmailTemplate } from './index';
+import { document, explain, footer, head, main } from '../src/index';
+import { defineEmailTemplate, renderEmail } from '../src/index';
+import { slot } from '../src/index';
+import type { EmailTemplate } from '../src/index';
 
 const props = {
   title: 'Hi',

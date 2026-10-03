@@ -124,7 +124,7 @@ npm run smoke        # load the ESM, CJS, and script-tag builds
 npm run check        # format, lint, typecheck, build, test, smoke, publint
 ```
 
-`markup-generator` is installed for local checks. `src/write.test.ts` renders a letter with `renderEmail` and writes it with `writeGeneratedFile`.
+`markup-generator` is installed for local checks. `test/write.test.ts` renders a letter with `renderEmail` and writes it with `writeGeneratedFile`.
 
 ## License
 

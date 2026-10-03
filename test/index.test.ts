@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { sampleHtml } from '../examples/compose';
-import { body, content, document, footer, head, main } from './index';
+import { body, content, document, footer, head, main } from '../src/index';
 
 describe('head', () => {
   it('renders an empty title by default', () => {
