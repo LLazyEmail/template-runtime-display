@@ -13,7 +13,7 @@ describe('head', () => {
   it('interpolates title and preview', () => {
     const html = head({ title: 'Hi', preview: 'peek' });
     expect(html).toContain('<title>Hi</title>');
-    expect(html).toContain('>peek</div>');
+    expect(html).toContain('<span class="preheader">peek</span>');
   });
 });
 
