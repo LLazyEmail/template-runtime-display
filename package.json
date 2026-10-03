@@ -18,6 +18,46 @@
         "types": "./dist/index.d.cts",
         "default": "./dist/index.cjs"
       }
+    },
+    "./escape": {
+      "import": {
+        "types": "./dist/escape.d.ts",
+        "default": "./dist/escape.js"
+      },
+      "require": {
+        "types": "./dist/escape.d.cts",
+        "default": "./dist/escape.cjs"
+      }
+    },
+    "./head": {
+      "import": {
+        "types": "./dist/head.d.ts",
+        "default": "./dist/head.js"
+      },
+      "require": {
+        "types": "./dist/head.d.cts",
+        "default": "./dist/head.cjs"
+      }
+    },
+    "./body": {
+      "import": {
+        "types": "./dist/body.d.ts",
+        "default": "./dist/body.js"
+      },
+      "require": {
+        "types": "./dist/body.d.cts",
+        "default": "./dist/body.cjs"
+      }
+    },
+    "./main": {
+      "import": {
+        "types": "./dist/main.d.ts",
+        "default": "./dist/main.js"
+      },
+      "require": {
+        "types": "./dist/main.d.cts",
+        "default": "./dist/main.cjs"
+      }
     }
   },
   "files": [
@@ -85,6 +125,7 @@
     "runtime",
     "debug",
     "llazyemail",
-    "esm"
+    "esm",
+    "escape"
   ]
 }

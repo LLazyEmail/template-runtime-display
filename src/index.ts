@@ -23,6 +23,8 @@ export { explain } from './runtime/explain';
 export { defineEmailTemplate, renderEmail } from './email';
 export type { EmailProps, EmailTemplate } from './email';
 
+export { escapeHtml } from './escape';
+
 export { head } from './head';
 export type { HeadProps } from './head';
 

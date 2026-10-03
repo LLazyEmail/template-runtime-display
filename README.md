@@ -90,18 +90,20 @@ renderTemplate(page, { title: 'Hello' }, { slots: { extra: '<p>More</p>' } });
 
 The email preset calls these. They stay public so a part, or a caller, can use them directly.
 
-| Function                                            | Role                                                                 |
-| --------------------------------------------------- | -------------------------------------------------------------------- |
-| `head({ title?, preview? })`                        | `<head>` with charset, viewport, `<title>`, and a hidden preview div |
-| `main({ heading?, bodyText?, ctaLabel?, ctaUrl? })` | `<main>` with an `<h1>`, a paragraph, and an optional button         |
-| `footer({ companyName?, unsubscribeUrl? })`         | `<footer>` with the company name and an optional unsubscribe link    |
-| `body({ mainHtml?, footerHtml? })`                  | `<body>` around the main and footer fragments                        |
-| `content({ content? })`                             | A `<div>` around raw HTML. The email shell does not call it          |
-| `document({ headHtml?, mainHtml?, footerHtml? })`   | Doctype, `<html lang="en">`, head, and body                          |
+| Function                                                        | Role                                                                             |
+| --------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `head({ title?, preview?, styles?, extraHead? })`               | `<head>` with inbox meta, `<title>`, optional preheader, styles, extra HTML      |
+| `main({ heading?, bodyText?, ctaLabel?, ctaUrl?, innerHtml? })` | `<main>` with an `<h1>`, a paragraph, and an optional button, or raw `innerHtml` |
+| `footer({ companyName?, unsubscribeUrl? })`                     | `<footer>` with the company name and an optional unsubscribe link                |
+| `body({ preheaderHtml?, mainHtml?, footerHtml? })`              | `<body>` around an optional preheader, main, and footer                          |
+| `content({ content? })`                                         | A `<div>` around raw HTML. The email shell does not call it                      |
+| `document({ headHtml?, mainHtml?, footerHtml? })`               | Doctype, `<html lang="en">`, head, and body                                      |
 
 Omitted strings render empty. The button is present only when both `ctaLabel` and `ctaUrl` are set. The unsubscribe link is present only when `unsubscribeUrl` is set.
 
-`bodyText`, `content`, and slot strings may contain inline HTML. Callers own that markup.
+`bodyText`, `content`, and slot strings may contain inline HTML. Callers own that markup. `escapeHtml` is exported for text and attribute positions; the shell does not call it.
+
+Subpath exports: `@llazyemail/template-runtime-display/escape`, `/head`, `/body`, and `/main`.
 
 ## Scripts
 
