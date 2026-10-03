@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { body, escapeHtml, head, main } from './index';
+import { body, escapeHtml, head, main } from '../src/index';
 
 describe('escapeHtml', () => {
   it('escapes text and attribute characters', () => {

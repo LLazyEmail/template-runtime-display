@@ -4,12 +4,12 @@ export default defineConfig({
   test: {
     globals: false,
     environment: 'node',
-    include: ['src/**/*.test.ts'],
+    include: ['test/**/*.test.ts'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],
       include: ['src/**/*.ts'],
-      exclude: ['src/**/*.test.ts', 'src/index.ts', 'src/runtime/types.ts'],
+      exclude: ['src/index.ts', 'src/runtime/types.ts'],
       thresholds: {
         statements: 100,
         branches: 100,

@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { writeGeneratedFile } from 'markup-generator';
 import { afterEach, describe, expect, it } from 'vitest';
-import { renderEmail } from './index';
+import { renderEmail } from '../src/index';
 
 const dirs: string[] = [];
 

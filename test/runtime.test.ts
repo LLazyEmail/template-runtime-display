@@ -7,8 +7,8 @@ import {
   renderTemplate,
   RenderError,
   slot,
-} from './index';
-import type { RenderContext, Template, TemplatePart } from './index';
+} from '../src/index';
+import type { RenderContext, Template, TemplatePart } from '../src/index';
 
 function template(
   parts: readonly TemplatePart<Record<string, string>>[],

@@ -10,7 +10,7 @@ The package is stateless, so loading the ESM and CJS builds in one process is sa
 npm install
 npm run dev            # tsup --watch
 npm run build          # dist/index.js, dist/index.cjs, dist/index.global.js, dist/index.d.ts
-npm test               # vitest run — src/**/*.test.ts
+npm test               # vitest run — test/**/*.test.ts
 npm run test:coverage  # v8 coverage; executable src files must stay at 100%
 npm run typecheck      # tsc --noEmit
 npm run lint           # eslint
@@ -25,7 +25,7 @@ npm run check          # format, lint, typecheck, build, test, smoke, publint
 
 Node.js **24+**. Run `npm run check` before handing work back. Run `npm run test:coverage` when you add or change an executable `src/` file. `src/index.ts` and `src/runtime/types.ts` are excluded: v8 reports 0% on files with no runtime code.
 
-ESLint and Prettier both run in CI. Tests are Vitest, not Jest. `markup-generator` is a devDependency used to write rendered HTML in `src/write.test.ts` and `npm run generate`. It is not a runtime dependency.
+ESLint and Prettier both run in CI. Tests are Vitest, not Jest. `markup-generator` is a devDependency used to write rendered HTML in `test/write.test.ts` and `npm run generate`. It is not a runtime dependency.
 
 ## Layout
 
@@ -41,11 +41,11 @@ src/footer.ts          footer()
 src/body.ts            body()
 src/content.ts         content()
 src/document.ts        document()
-src/runtime.test.ts    runtime spec
-src/email.test.ts      email preset spec
-src/index.test.ts      fragment spec
+test/runtime.test.ts    runtime spec
+test/email.test.ts      email preset spec
+test/index.test.ts      fragment spec
 examples/compose.ts    sample letter; sampleHtml is covered by the suite
-src/write.test.ts      writes a rendered letter through markup-generator and reads it back
+test/write.test.ts      writes a rendered letter through markup-generator and reads it back
 scripts/generate.mjs   prints explain() and writes generated/letter.html
 .github/workflows/ci.yml
 .github/workflows/publish.yml   GitHub Packages on release, or a manual run
@@ -98,7 +98,7 @@ Traces and defined templates are frozen so a later template cannot change an ear
 
 1. Add `src/<name>.ts` with a props interface (JSDoc on each field) and one function. Default omitted strings to `''`.
 2. Re-export the function and the type from `src/index.ts`.
-3. Extend `src/index.test.ts`: default render, each omission rule, and the filled-in render.
+3. Extend `test/index.test.ts`: default render, each omission rule, and the filled-in render.
 4. Add the function to `README.md`, `llms.txt`, and `llms-full.txt`.
 5. Run `npm run check` and `npm run test:coverage`.
 
