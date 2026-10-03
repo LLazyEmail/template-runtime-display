@@ -127,5 +127,8 @@
     "llazyemail",
     "esm",
     "escape"
-  ]
+  ],
+  "dependencies": {
+    "@llazyemail/render-template": "github:LLazyEmail/render-template#0.1.2"
+  }
 }
