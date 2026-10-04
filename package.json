@@ -129,6 +129,6 @@
     "escape"
   ],
   "dependencies": {
-    "@llazyemail/render-template": "github:LLazyEmail/render-template#export-runtime-helpers"
+    "@llazyemail/render-template": "github:LLazyEmail/render-template#0.1.3"
   }
 }
