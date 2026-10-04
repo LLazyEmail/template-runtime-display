@@ -1,5 +1,5 @@
+import { assertTemplate, type Template as PackageTemplate } from '@llazyemail/render-template';
 import type { RenderContext, RenderJob, RenderOptions, RenderResult, Template } from './types';
-import { assertTemplate } from './helpers';
 import { renderTemplate } from './renderTemplate';
 
 export { RenderError } from '@llazyemail/render-template';
@@ -9,7 +9,7 @@ export { RenderError } from '@llazyemail/render-template';
  * array do not change a template that has already been defined.
  */
 export function defineTemplate<TProps>(template: Template<TProps>): Template<TProps> {
-  assertTemplate(template);
+  assertTemplate(template as PackageTemplate<TProps>);
   return Object.freeze({
     id: template.id,
     parts: Object.freeze(
