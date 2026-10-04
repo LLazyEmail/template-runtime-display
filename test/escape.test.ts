@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { body, escapeHtml, head, main } from '../src/index';
+import { body } from '../src/templates/body/body';
+import { head } from '../src/templates/head/head';
+import { main } from '../src/templates/main/main';
+import { escapeHtml } from '../src/utils/escape';
 
 describe('escapeHtml', () => {
   it('escapes text and attribute characters', () => {

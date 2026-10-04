@@ -30,19 +30,20 @@ ESLint and Prettier both run in CI. Tests are Vitest, not Jest. `markup-generato
 ## Layout
 
 ```
-src/index.ts           public exports only — consumers import the package root
-src/runtime/types.ts   template, context, trace, and job types
-src/runtime/render.ts         public re-exports
-src/runtime/renderTemplate.ts renderTemplate from @llazyemail/render-template
-src/runtime/api.ts            defineTemplate, renderMany, slot, hasSlot, RenderError
-src/runtime/explain.ts explain()
-src/email.ts           defineEmailTemplate, renderEmail
-src/head.ts            head()
-src/main.ts            main()
-src/footer.ts          footer()
-src/body.ts            body()
-src/content.ts         content()
-src/document.ts        document()
+src/index.ts                      public exports only — consumers import the package root
+src/runtime/types.ts              template, context, trace, and job types
+src/runtime/render.ts             public re-exports
+src/runtime/renderTemplate.ts     renderTemplate from @llazyemail/render-template
+src/runtime/api.ts                defineTemplate, renderMany, slot, hasSlot, RenderError
+src/runtime/explain.ts            explain()
+src/templates/email/email.ts      defineEmailTemplate, renderEmail
+src/templates/head/head.ts        head()
+src/templates/main/main.ts        main()
+src/templates/footer/footer.ts    footer()
+src/templates/body/body.ts        body()
+src/templates/content/content.ts  content()
+src/templates/document/document.ts document()
+src/utils/escape.ts               escapeHtml()
 test/runtime.test.ts    runtime spec
 test/email.test.ts      email preset spec
 test/index.test.ts      fragment spec
@@ -98,7 +99,7 @@ Traces and defined templates are frozen so a later template cannot change an ear
 
 ## Add a fragment
 
-1. Add `src/<name>.ts` with a props interface (JSDoc on each field) and one function. Default omitted strings to `''`.
+1. Add `src/templates/<name>/<name>.ts` with a props interface (JSDoc on each field) and one function. Default omitted strings to `''`. Shared helpers go in `src/utils/`.
 2. Re-export the function and the type from `src/index.ts`.
 3. Extend `test/index.test.ts`: default render, each omission rule, and the filled-in render.
 4. Add the function to `README.md`, `llms.txt`, and `llms-full.txt`.

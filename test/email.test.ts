@@ -1,8 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { document, explain, footer, head, main } from '../src/index';
-import { defineEmailTemplate, renderEmail } from '../src/index';
-import { slot } from '../src/index';
-import type { EmailTemplate } from '../src/index';
+import { document } from '../src/templates/document/document';
+import { footer } from '../src/templates/footer/footer';
+import { head } from '../src/templates/head/head';
+import { main } from '../src/templates/main/main';
+import { explain } from '../src/runtime/explain';
+import { defineEmailTemplate, renderEmail } from '../src/templates/email/email';
+import { slot } from '../src/runtime/render';
+import type { EmailTemplate } from '../src/templates/email/email';
 
 const props = {
   title: 'Hi',
