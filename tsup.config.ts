@@ -28,10 +28,10 @@ export default defineConfig([
   {
     ...shared,
     entry: {
-      escape: 'src/escape.ts',
-      head: 'src/head.ts',
-      body: 'src/body.ts',
-      main: 'src/main.ts',
+      escape: 'src/utils/escape.ts',
+      head: 'src/templates/head/head.ts',
+      body: 'src/templates/body/body.ts',
+      main: 'src/templates/main/main.ts',
     },
     format: ['esm', 'cjs'],
     clean: false,

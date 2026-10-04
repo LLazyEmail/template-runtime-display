@@ -1,5 +1,5 @@
-import { body } from './body';
-import type { BodyProps } from './body';
+import { body } from '../body/body';
+import type { BodyProps } from '../body/body';
 
 export interface DocumentProps extends BodyProps {
   /** `<head>` fragment, placed directly after `<html>`. */

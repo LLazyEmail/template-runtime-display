@@ -1,9 +1,9 @@
-import { document } from './document';
-import { footer } from './footer';
-import { head } from './head';
-import { main } from './main';
-import { defineTemplate, hasSlot, renderTemplate, slot } from './runtime/render';
-import type { RenderOptions, RenderResult, Template, TemplatePart } from './runtime/types';
+import { document } from '../document/document';
+import { footer } from '../footer/footer';
+import { head } from '../head/head';
+import { main } from '../main/main';
+import { defineTemplate, hasSlot, renderTemplate, slot } from '../../runtime/render';
+import type { RenderOptions, RenderResult, Template, TemplatePart } from '../../runtime/types';
 
 /** Flat props for the built-in email shell. Every field is optional. */
 export interface EmailProps {
