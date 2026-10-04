@@ -19,4 +19,4 @@ Vitest, `test/**/*.test.ts` only. Coverage via `@vitest/coverage-v8`. Executable
 
 ## Editing
 
-Fragment helpers stay `(props?) => string` and live one per folder under `src/templates/<name>/<name>.ts`. Shared helpers live in `src/utils/`. Re-export from `src/index.ts`. The runtime returns results and throws `RenderError` when `onError` is `throw`. Custom code is a part or a slot, not a new registry. Omitted strings render empty. The CTA needs both label and url. Unsubscribe needs a url. Props and slots are raw HTML. `document` keeps `<html lang="en">` and a leading `<!DOCTYPE html>`.
+Fragment helpers stay `(props?) => string` and live one per folder under `src/templates/<name>/<name>.ts`. Shared helpers live in `src/utils/`. Re-export from `src/index.ts`. The runtime returns results and throws `RenderError` when `onError` is `throw`. Package-owned rejects throw `DisplayError` from `src/runtime/errors.ts`. Custom code is a part or a slot, not a new registry. Omitted strings render empty. The CTA needs both label and url. Unsubscribe needs a url. Props and slots are raw HTML. `document` keeps `<html lang="en">` and a leading `<!DOCTYPE html>`.

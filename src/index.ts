@@ -1,9 +1,12 @@
 export {
   defineTemplate,
+  displayErrors,
   hasSlot,
   renderMany,
   renderTemplate,
   slot,
+  DisplayError,
+  DisplayErrorCode,
   RenderError,
 } from './runtime/render';
 export type {

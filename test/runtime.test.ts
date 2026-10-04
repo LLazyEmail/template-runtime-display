@@ -5,6 +5,8 @@ import {
   hasSlot,
   renderMany,
   renderTemplate,
+  DisplayError,
+  DisplayErrorCode,
   RenderError,
   slot,
 } from '../src/index';
@@ -226,9 +228,22 @@ describe('slots', () => {
         num: () => 2 as unknown as string,
       },
     };
+    expect(() => slot(ctx, 'bad')).toThrow(DisplayError);
     expect(() => slot(ctx, 'bad')).toThrow(/slot "bad" is number/);
     expect(() => slot(ctx, 'nil')).toThrow(/slot "nil" is null/);
     expect(() => slot(ctx, 'num')).toThrow(/slot "num" returned number/);
+    try {
+      slot(ctx, 'bad');
+    } catch (error) {
+      expect(error).toBeInstanceOf(DisplayError);
+      expect((error as DisplayError).code).toBe(DisplayErrorCode.slotType);
+      expect((error as DisplayError).name).toBe('DisplayError');
+    }
+    try {
+      slot(ctx, 'num');
+    } catch (error) {
+      expect((error as DisplayError).code).toBe(DisplayErrorCode.slotReturn);
+    }
   });
 });
 
