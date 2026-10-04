@@ -23,7 +23,7 @@ npm run smoke          # load the ESM, CJS, and IIFE builds; requires dist/
 npm run check          # format, lint, typecheck, build, test, smoke, publint
 ```
 
-Node.js **24+**. Run `npm run check` before handing work back. Run `npm run test:coverage` when you add or change an executable `src/` file. `src/index.ts` and `src/runtime/types.ts` are excluded: v8 reports 0% on files with no runtime code.
+Node.js **24+**. Run `npm run check` before handing work back. Run `npm run test:coverage` when you add or change an executable `src/` file. `src/index.ts`, `src/runtime/types.ts`, and `src/templates/email/types.ts` are excluded: v8 reports 0% on files with no runtime code.
 
 ESLint and Prettier both run in CI. Tests are Vitest, not Jest. `markup-generator` is a devDependency used to write rendered HTML in `test/write.test.ts` and `npm run generate`. It is not a runtime dependency.
 
@@ -37,6 +37,8 @@ src/runtime/renderTemplate.ts     renderTemplate from @llazyemail/render-templat
 src/runtime/api.ts                defineTemplate, renderMany, slot, hasSlot, RenderError
 src/runtime/explain.ts            explain()
 src/templates/email/email.ts      defineEmailTemplate, renderEmail
+src/templates/email/shell.ts      shell parts and compose
+src/templates/email/types.ts      EmailProps, EmailTemplate
 src/templates/head/head.ts        head()
 src/templates/main/main.ts        main()
 src/templates/footer/footer.ts    footer()
@@ -44,6 +46,7 @@ src/templates/body/body.ts        body()
 src/templates/content/content.ts  content()
 src/templates/document/document.ts document()
 src/utils/escape.ts               escapeHtml()
+src/utils/pickDefined.ts          drop omitted string fields
 test/runtime.test.ts    runtime spec
 test/email.test.ts      email preset spec
 test/index.test.ts      fragment spec
