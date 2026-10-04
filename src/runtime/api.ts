@@ -1,8 +1,10 @@
 import { assertTemplate, type Template as PackageTemplate } from '@llazyemail/render-template';
 import type { RenderContext, RenderJob, RenderOptions, RenderResult, Template } from './types';
+import { displayErrors } from './errors';
 import { renderTemplate } from './renderTemplate';
 
 export { RenderError } from '@llazyemail/render-template';
+export { DisplayError, DisplayErrorCode, displayErrors } from './errors';
 
 /**
  * Validate, copy, and freeze a template. Later edits to the caller's part
@@ -40,15 +42,11 @@ export function slot<TProps>(ctx: RenderContext<TProps>, id: string): string {
   if (typeof value === 'function') {
     const html = value(ctx);
     if (html == null) return '';
-    if (typeof html !== 'string') {
-      throw new TypeError(`slot "${id}" returned ${typeof html}, expected a string`);
-    }
+    if (typeof html !== 'string') throw displayErrors.slotReturn(id, html);
     return html;
   }
   if (typeof value === 'string') return value;
-  throw new TypeError(
-    `slot "${id}" is ${value === null ? 'null' : typeof value}, expected a string or function`,
-  );
+  throw displayErrors.slotType(id, value);
 }
 
 /** True when the caller passed this slot, including an empty string. */

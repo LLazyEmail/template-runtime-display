@@ -4,6 +4,7 @@ import { footer } from '../src/templates/footer/footer';
 import { head } from '../src/templates/head/head';
 import { main } from '../src/templates/main/main';
 import { explain } from '../src/runtime/explain';
+import { DisplayError, DisplayErrorCode } from '../src/runtime/errors';
 import { defineEmailTemplate, renderEmail } from '../src/templates/email/email';
 import { slot } from '../src/runtime/render';
 import type { EmailTemplate } from '../src/templates/email/email';
@@ -140,7 +141,14 @@ describe('renderEmail', () => {
   it('names the shell part when compose is called without rendered HTML', () => {
     const defined = defineEmailTemplate({ id: 'letter' });
     expect(() => defined.compose({}, { templateId: 'letter', props: {}, slots: {} })).toThrow(
-      /missing part "head"/,
+      DisplayError,
     );
+    try {
+      defined.compose({}, { templateId: 'letter', props: {}, slots: {} });
+    } catch (error) {
+      expect(error).toBeInstanceOf(DisplayError);
+      expect((error as DisplayError).code).toBe(DisplayErrorCode.shellPartMissing);
+      expect((error as DisplayError).message).toContain('missing part "head"');
+    }
   });
 });

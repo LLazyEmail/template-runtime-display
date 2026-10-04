@@ -67,7 +67,7 @@ One text block for logs. A `RenderError` prints `error.message` (it contains `fa
 
 `hasSlot` uses `Object.hasOwn`. An empty string is provided. A missing slot makes `slot` return `''`.
 
-A function slot is called with the same context. `null` and `undefined` become `''`. A non-string return throws `TypeError` (`slot "<id>" returned <type>, expected a string`). A slot that is not a string or function throws `TypeError` (`slot "<id>" is null|number|..., expected a string or function`). The part that called `slot` is the part recorded on the trace.
+A function slot is called with the same context. `null` and `undefined` become `''`. A non-string return throws `DisplayError` code `slot_return` (`slot "<id>" returned <type>, expected a string`). A slot that is not a string or function throws `DisplayError` code `slot_type` (`slot "<id>" is null|number|..., expected a string or function`). The part that called `slot` is the part recorded on the trace.
 
 ## renderMany(jobs, options?): RenderResult[]
 

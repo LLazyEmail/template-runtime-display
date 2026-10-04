@@ -35,6 +35,7 @@ src/runtime/types.ts              template, context, trace, and job types
 src/runtime/render.ts             public re-exports
 src/runtime/renderTemplate.ts     renderTemplate from @llazyemail/render-template
 src/runtime/api.ts                defineTemplate, renderMany, slot, hasSlot, RenderError
+src/runtime/errors.ts             DisplayError, codes, and message catalog
 src/runtime/explain.ts            explain()
 src/templates/email/email.ts      defineEmailTemplate, renderEmail
 src/templates/email/shell.ts      shell parts and compose
@@ -77,7 +78,7 @@ Each part receives one context: `templateId`, the same props object the caller p
 
 `renderMany` runs jobs that share one props type. Throw mode stops the batch at the first broken job, and later jobs do not run. Pass `onError: 'collect'` when one broken template must not hide the others. Jobs may omit `props` (`{}`) and `slots`.
 
-Custom code is a part, or a slot that a part reads with `slot(ctx, id)`. A missing slot is `''`. `hasSlot` is true for an empty string. A function slot is called with the same context. `null` or `undefined` from that function is `''`. A non-string slot, or a non-string return, throws `TypeError` and the part that called `slot` is the part that fails.
+Custom code is a part, or a slot that a part reads with `slot(ctx, id)`. A missing slot is `''`. `hasSlot` is true for an empty string. A function slot is called with the same context. `null` or `undefined` from that function is `''`. A non-string slot, or a non-string return, throws `DisplayError` (`slot_type` or `slot_return`) and the part that called `slot` is the part that fails. Package-owned messages are built in `src/runtime/errors.ts`. Render and validation failures stay `RenderError`.
 
 `defineEmailTemplate` and `renderEmail` are a preset over the same runtime. Part order is `head`, `main`, the caller's parts, then `footer`. Compose places custom HTML inside `<body>` after `main` and before `footer`, joined with newlines. With no custom parts, the HTML equals `document({ headHtml: head(...), mainHtml: main(...), footerHtml: footer(...) })`. A slot named `head`, `main`, or `footer` replaces that built-in fragment. Omitted email props follow the fragment omission rules. `content()` is not in the shell. A custom part may call it.
 

@@ -1,3 +1,4 @@
+import { displayErrors } from '../../runtime/errors';
 import { document } from '../document/document';
 import { hasSlot, slot } from '../../runtime/render';
 import type { RenderContext, TemplatePart } from '../../runtime/types';
@@ -8,7 +9,7 @@ const SHELL_PARTS = new Set(['head', 'main', 'footer']);
 function readPart(parts: Readonly<Record<string, string>>, id: string): string {
   const html = parts[id];
   if (typeof html !== 'string') {
-    throw new TypeError(`email shell is missing part "${id}"`);
+    throw displayErrors.shellPartMissing(id);
   }
   return html;
 }
