@@ -2,12 +2,12 @@ export {
   defineTemplate,
   displayErrors,
   hasSlot,
+  renderMany,
   renderTemplate,
   slot,
   DisplayError,
   DisplayErrorCode,
 } from './runtime/render';
-export { renderMany, RenderError } from '@llazyemail/render-template';
 export type {
   PartFailure,
   PartStatus,
@@ -19,6 +19,7 @@ export type {
   TemplatePart,
 } from './runtime/types';
 export type { RenderJob, RenderOptions } from '@llazyemail/render-template';
+export { RenderError } from '@llazyemail/render-template';
 export { explain } from './runtime/explain';
 
 export { defineEmailTemplate, renderEmail } from './templates/email/email';
