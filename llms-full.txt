@@ -71,6 +71,8 @@ A function slot is called with the same context. `null` and `undefined` become `
 
 ## renderMany(jobs, options?): RenderResult[]
 
+Re-exported from `@llazyemail/render-template`, along with `RenderJob`, `RenderOptions`, and `RenderError`. This package does not define them.
+
 Every job shares `TProps`. A job is `{ template, props?, slots? }`. Omitted props become `{}`. `options` is only `{ onError? }`.
 
 `throw` (default) lets the first `RenderError` escape. Later jobs do not run. `collect` returns one result per job, including failures.

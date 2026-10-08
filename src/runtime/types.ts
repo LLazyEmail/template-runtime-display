@@ -1,5 +1,6 @@
 /** HTML string, or a function that receives the same context as a part. */
-export type SlotValue<TProps> = string | ((ctx: RenderContext<TProps>) => string);
+export type SlotValue<TProps> =
+  string | ((ctx: RenderContext<TProps>) => string | null | undefined);
 
 /** One named step. The id is the name that shows up when this step breaks. */
 export interface TemplatePart<TProps> {
@@ -49,21 +50,4 @@ export interface RenderResult {
   parts: readonly PartTrace[];
   /** Set when `compose` itself throws and `onError` is `collect`. */
   composeError?: PartFailure;
-}
-
-export interface RenderOptions<TProps> {
-  /**
-   * `throw` stops at the first broken part and throws `RenderError`.
-   * `collect` records the error, uses `''` for that part, and continues.
-   * Later templates in `renderMany` still run.
-   */
-  onError?: 'throw' | 'collect';
-  slots?: Readonly<Record<string, SlotValue<TProps>>>;
-}
-
-/** One template in a batch. Props are whatever that template declared. */
-export interface RenderJob<TProps> {
-  template: Template<TProps>;
-  props?: TProps;
-  slots?: Readonly<Record<string, SlotValue<TProps>>>;
 }

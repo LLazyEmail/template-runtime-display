@@ -36,6 +36,6 @@ explain(result);
 result.html;
 ```
 
-`renderTemplate` and `defineTemplate` are the same runtime without the email shell. `renderMany` batches jobs that share one props type. Default `onError` is `throw` (`RenderError` with `partId`, `trace`, and `cause`). `collect` keeps going and sets `ok: false`.
+`renderTemplate` and `defineTemplate` are the same runtime without the email shell. `renderMany`, `RenderJob`, `RenderOptions`, and `RenderError` are re-exported from `@llazyemail/render-template`. `renderMany` batches jobs that share one props type. Default `onError` is `throw` (`RenderError` with `partId`, `trace`, and `cause`). `collect` keeps going and sets `ok: false`.
 
 Fragment helpers `head`, `main`, `footer`, `body`, `content`, and `document` return strings. Omitted strings are empty. The button needs both `ctaLabel` and `ctaUrl`. Unsubscribe needs `unsubscribeUrl`. Props and slots are raw HTML. `document` uses `<html lang="en">`.

@@ -1,9 +1,7 @@
 import { assertTemplate, type Template as PackageTemplate } from '@llazyemail/render-template';
-import type { RenderContext, RenderJob, RenderOptions, RenderResult, Template } from './types';
+import type { RenderContext, Template } from './types';
 import { displayErrors } from './errors';
-import { renderTemplate } from './renderTemplate';
 
-export { RenderError } from '@llazyemail/render-template';
 export { DisplayError, DisplayErrorCode, displayErrors } from './errors';
 
 /**
@@ -18,20 +16,6 @@ export function defineTemplate<TProps>(template: Template<TProps>): Template<TPr
       template.parts.map((part) => Object.freeze({ id: part.id, render: part.render })),
     ),
     compose: template.compose,
-  });
-}
-
-/** Render many templates. Use `onError: 'collect'` so one broken template does not stop the batch. */
-export function renderMany<TProps>(
-  jobs: readonly RenderJob<TProps>[],
-  options?: Pick<RenderOptions<TProps>, 'onError'>,
-): RenderResult[] {
-  return jobs.map((job) => {
-    const next: RenderOptions<TProps> = {};
-    if (options?.onError !== undefined) next.onError = options.onError;
-    if (job.slots !== undefined) next.slots = job.slots;
-    const props = job.props === undefined ? ({} as TProps) : job.props;
-    return renderTemplate(job.template, props, next);
   });
 }
 

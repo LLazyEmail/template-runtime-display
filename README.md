@@ -65,7 +65,7 @@ const result = renderEmail(template, props, { onError: 'collect' });
 explain(result);
 ```
 
-`collect` records the broken part, uses `''` for it, and continues. `result.ok` is false. Full HTML for every part that ran stays on `result.parts[].html`. `renderMany` uses the same switch. In throw mode the first broken job stops the batch. Pass `collect` when one failure must not hide the rest. Jobs in one batch share a props type.
+`collect` records the broken part, uses `''` for it, and continues. `result.ok` is false. Full HTML for every part that ran stays on `result.parts[].html`. `renderMany` is `@llazyemail/render-template`'s batch helper, re-exported here, and uses the same switch. In throw mode the first broken job stops the batch. Pass `collect` when one failure must not hide the rest. Jobs in one batch share a props type.
 
 ## A document that is not the email shell
 

@@ -1,4 +1,4 @@
-import { RenderError } from './render';
+import { RenderError } from '@llazyemail/render-template';
 import type { RenderResult } from './types';
 
 /** One text block for logs. Full HTML stays on each part trace. */
