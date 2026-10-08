@@ -1,10 +1,10 @@
 import {
   renderTemplate as renderPackageTemplate,
-  type RenderOptions as PackageRenderOptions,
+  type RenderOptions,
   type RenderResult as PackageRenderResult,
   type Template as PackageTemplate,
 } from '@llazyemail/render-template';
-import type { RenderOptions, RenderResult, Template } from './types';
+import type { RenderResult, Template } from './types';
 
 /**
  * Render one template. The same template and props produce the same HTML.
@@ -18,6 +18,6 @@ export function renderTemplate<TProps>(
   return renderPackageTemplate(
     template as PackageTemplate<TProps>,
     props,
-    options as PackageRenderOptions<TProps>,
+    options,
   ) as PackageRenderResult as RenderResult;
 }

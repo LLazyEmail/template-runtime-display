@@ -1,8 +1,9 @@
+import type { RenderOptions } from '@llazyemail/render-template';
 import { footer } from '../footer/footer';
 import { head } from '../head/head';
 import { main } from '../main/main';
 import { defineTemplate, renderTemplate } from '../../runtime/render';
-import type { RenderOptions, RenderResult, Template } from '../../runtime/types';
+import type { RenderResult, Template } from '../../runtime/types';
 import { pickDefined } from '../../utils/pickDefined';
 import { composeEmail, shellPart } from './shell';
 import type { EmailProps, EmailTemplate } from './types';

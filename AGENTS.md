@@ -31,10 +31,10 @@ ESLint and Prettier both run in CI. Tests are Vitest, not Jest. `markup-generato
 
 ```
 src/index.ts                      public exports only — consumers import the package root
-src/runtime/types.ts              template, context, trace, and job types
+src/runtime/types.ts              template, context, and trace types
 src/runtime/render.ts             public re-exports
 src/runtime/renderTemplate.ts     renderTemplate from @llazyemail/render-template
-src/runtime/api.ts                defineTemplate, renderMany, slot, hasSlot, RenderError
+src/runtime/api.ts                defineTemplate, slot, hasSlot
 src/runtime/errors.ts             DisplayError, codes, and message catalog
 src/runtime/explain.ts            explain()
 src/templates/email/email.ts      defineEmailTemplate, renderEmail
@@ -76,7 +76,7 @@ Each part receives one context: `templateId`, the same props object the caller p
 
 `explain` prints a short status report. A thrown `RenderError` prints its message. A result prints `ok` or `failed`, the part count, and the HTML length. Each part is one line: id, status, chars, ms, and the error when there is one. Full HTML stays on `parts[].html`.
 
-`renderMany` runs jobs that share one props type. Throw mode stops the batch at the first broken job, and later jobs do not run. Pass `onError: 'collect'` when one broken template must not hide the others. Jobs may omit `props` (`{}`) and `slots`.
+`renderMany`, `RenderJob`, `RenderOptions`, and `RenderError` come from `@llazyemail/render-template`. This package re-exports them. `renderMany` runs jobs that share one props type. Throw mode stops the batch at the first broken job, and later jobs do not run. Pass `onError: 'collect'` when one broken template must not hide the others. Jobs may omit `props` (`{}`) and `slots`.
 
 Custom code is a part, or a slot that a part reads with `slot(ctx, id)`. A missing slot is `''`. `hasSlot` is true for an empty string. A function slot is called with the same context. `null` or `undefined` from that function is `''`. A non-string slot, or a non-string return, throws `DisplayError` (`slot_type` or `slot_return`) and the part that called `slot` is the part that fails. Package-owned messages are built in `src/runtime/errors.ts`. Render and validation failures stay `RenderError`.
 
