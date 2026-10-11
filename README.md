@@ -12,6 +12,14 @@ Requires **Node.js 24+**. No runtime dependencies. No template registry. Strings
 - Full API: [llms-full.txt](./llms-full.txt)
 - Sample: [examples/compose.ts](./examples/compose.ts)
 
+## Package ecosystem and Lit
+
+This package builds on `@llazyemail/render-template` (currently pinned via GitHub ref in `package.json`). Parts must return **strings**. Lit `TemplateResult`s are not supported inside parts.
+
+Consumers that still use Lit SSR (e.g. `_playing_with_lit`) keep a thin local adapter (`renderEmailBody` + `stripLitMarkers`) that turns a Lit result into a string, then pass that string into `document` / `renderTemplate` / `renderEmail`. Do not try to put Lit templates directly into a part `render` function — that is a known source of runtime errors.
+
+Generation/catalog/write logic belongs in `@llazyemail/generate-template`, not here.
+
 ## Install
 
 Published to GitHub Packages. Copy [`.npmrc.example`](./.npmrc.example) to `.npmrc` in the consuming project. `GITHUB_TOKEN` needs `read:packages`.
