@@ -4,6 +4,12 @@
 
 The package is stateless, so loading the ESM and CJS builds in one process is safe.
 
+## Lit and render-template notes
+
+Parts must return strings. The package depends on `@llazyemail/render-template` (see `package.json`). Lit `TemplateResult` objects cannot be returned from a part `render` function. Consumers that still author with Lit keep a local `renderEmailBody` / `stripLitMarkers` step that produces a string, then feed that string into the shell helpers or `renderTemplate`.
+
+Do not vendor or reimplement the part/compose runtime; use the re-exports from this package or from `render-template` directly. Generation logic belongs in `@llazyemail/generate-template`.
+
 ## Commands
 
 ```bash
