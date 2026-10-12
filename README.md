@@ -14,7 +14,9 @@ Requires **Node.js 24+**. No runtime dependencies. No template registry. Strings
 
 ## Package ecosystem and Lit
 
-This package builds on `@llazyemail/render-template` (currently pinned via GitHub ref in `package.json`). Parts must return **strings**. Lit `TemplateResult`s are not supported inside parts.
+This package builds on `@llazyemail/render-template` (currently pinned via GitHub ref `github:LLazyEmail/render-template#0.3.0` in `package.json`). Prefer a published version from GitHub Packages when one is available and compatible, to reduce install fragility.
+
+Parts must return **strings**. Lit `TemplateResult`s are not supported inside parts.
 
 Consumers that still use Lit SSR (e.g. `_playing_with_lit`) keep a thin local adapter (`renderEmailBody` + `stripLitMarkers`) that turns a Lit result into a string, then pass that string into `document` / `renderTemplate` / `renderEmail`. Do not try to put Lit templates directly into a part `render` function — that is a known source of runtime errors.
 
