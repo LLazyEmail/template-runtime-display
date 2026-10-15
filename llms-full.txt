@@ -109,8 +109,8 @@ document({
 |---|---|
 | `doctype` | `<!DOCTYPE html>` |
 | `lang` | `"en"`. Pass `false` or `null` to omit the attribute |
-| `htmlAttributes` | raw extra attributes on `<html>` (e.g. `xmlns="..."`) |
-| `bodyAttributes` | raw extra attributes on `<body>` (e.g. `style="margin:0"`) |
+| `htmlAttributes` | raw string or structured map (e.g. `{ xmlns: '...' }`) |
+| `bodyAttributes` | raw string or structured map (e.g. `{ style: 'margin:0' }`) |
 | `headHtml` | empty |
 | (BodyProps) | passed through to `body` |
 

@@ -1,4 +1,5 @@
 import { openTag } from '../../utils/openTag';
+import type { TagAttributes } from '../../utils/openTag';
 
 export interface BodyProps {
   /** Raw HTML for the top of `<body>` (e.g. hidden preheader). */
@@ -8,18 +9,19 @@ export interface BodyProps {
   /** `<footer>` fragment. */
   footerHtml?: string;
   /**
-   * Raw attributes for the opening `<body>` tag
-   * (for example `style="background-color:#fff;margin:0"`).
+   * Attributes for the opening `<body>` tag.
+   * Accepts a raw string or a structured map
+   * (for example `{ style: 'background-color:#fff;margin:0' }`).
    * Callers own escaping. Empty when omitted.
    */
-  attributes?: string;
+  attributes?: TagAttributes;
 }
 
 export function body({
   preheaderHtml = '',
   mainHtml = '',
   footerHtml = '',
-  attributes = '',
+  attributes,
 }: BodyProps = {}): string {
   const open = openTag('body', attributes);
   return `${open}

@@ -44,3 +44,5 @@ export type { ContentProps } from './templates/content/content';
 
 export { document } from './templates/document/document';
 export type { DocumentProps, DocumentShellOptions } from './templates/document/document';
+export { openTag, serializeAttributes } from './utils/openTag';
+export type { TagAttributes } from './utils/openTag';

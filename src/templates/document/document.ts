@@ -1,6 +1,7 @@
 import { body } from '../body/body';
 import type { BodyProps } from '../body/body';
-import { openTag } from '../../utils/openTag';
+import { openTag, serializeAttributes } from '../../utils/openTag';
+import type { TagAttributes } from '../../utils/openTag';
 
 /**
  * Options that control the outer document shell.
@@ -19,17 +20,19 @@ export interface DocumentShellOptions {
    */
   lang?: string | false | null;
   /**
-   * Additional raw attributes for the `<html>` element
-   * (for example `xmlns="http://www.w3.org/1999/xhtml"`).
+   * Additional attributes for the `<html>` element.
+   * Accepts a raw string or a structured map
+   * (for example `{ xmlns: 'http://www.w3.org/1999/xhtml' }`).
    * Placed after `lang` when both are present. Callers own escaping.
    */
-  htmlAttributes?: string;
+  htmlAttributes?: TagAttributes;
   /**
-   * Additional raw attributes for the `<body>` element
-   * (for example `style="margin:0;padding:0"` or `class="email"`).
+   * Additional attributes for the `<body>` element.
+   * Accepts a raw string or a structured map
+   * (for example `{ style: 'margin:0;padding:0' }`).
    * Callers own escaping.
    */
-  bodyAttributes?: string;
+  bodyAttributes?: TagAttributes;
 }
 
 export interface DocumentProps extends BodyProps, DocumentShellOptions {
@@ -50,17 +53,20 @@ export function document({
   headHtml = '',
   doctype = '<!DOCTYPE html>',
   lang = 'en',
-  htmlAttributes = '',
-  bodyAttributes = '',
+  htmlAttributes,
+  bodyAttributes,
   ...rest
 }: DocumentProps = {}): string {
   const langPart = lang === false || lang === null || lang === '' ? '' : `lang="${lang}"`;
 
-  const htmlAttrParts = [langPart, htmlAttributes.trim()].filter(Boolean);
+  const htmlAttrParts = [langPart, serializeAttributes(htmlAttributes)].filter(Boolean);
   const htmlAttrs = htmlAttrParts.join(' ');
 
   const htmlOpen = openTag('html', htmlAttrs);
-  const bodyHtml = body({ ...rest, attributes: bodyAttributes });
+  const bodyHtml = body({
+    ...rest,
+    ...(bodyAttributes !== undefined ? { attributes: bodyAttributes } : {}),
+  });
 
   return `${doctype}
 ${htmlOpen}
