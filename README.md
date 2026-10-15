@@ -100,20 +100,20 @@ renderTemplate(page, { title: 'Hello' }, { slots: { extra: '<p>More</p>' } });
 
 The email preset calls these. They stay public so a part, or a caller, can use them directly.
 
-| Function                                                                                             | Role                                                                                                                      |
-| ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| `head({ title?, preview?, styles?, extraHead? })`                                                    | `<head>` with inbox meta, `<title>`, optional preheader, styles, extra HTML                                               |
-| `main({ heading?, bodyText?, ctaLabel?, ctaUrl?, innerHtml? })`                                      | `<main>` with an `<h1>`, a paragraph, and an optional button, or raw `innerHtml`                                          |
-| `footer({ companyName?, unsubscribeUrl? })`                                                          | `<footer>` with the company name and an optional unsubscribe link                                                         |
-| `body({ preheaderHtml?, mainHtml?, footerHtml?, attributes? })`                                      | `<body>` around an optional preheader, main, and footer. Optional raw attributes.                                         |
-| `content({ content? })`                                                                              | A `<div>` around raw HTML. The email shell does not call it                                                               |
+| Function                                                                                             | Role                                                                                                                    |
+| ---------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `head({ title?, preview?, styles?, extraHead? })`                                                    | `<head>` with inbox meta, `<title>`, optional preheader, styles, extra HTML                                             |
+| `main({ heading?, bodyText?, ctaLabel?, ctaUrl?, innerHtml? })`                                      | `<main>` with an `<h1>`, a paragraph, and an optional button, or raw `innerHtml`                                        |
+| `footer({ companyName?, unsubscribeUrl? })`                                                          | `<footer>` with the company name and an optional unsubscribe link                                                       |
+| `body({ preheaderHtml?, mainHtml?, footerHtml?, attributes? })`                                      | `<body>` around an optional preheader, main, and footer. Optional raw attributes.                                       |
+| `content({ content? })`                                                                              | A `<div>` around raw HTML. The email shell does not call it                                                             |
 | `document({ headHtml?, mainHtml?, footerHtml?, doctype?, lang?, htmlAttributes?, bodyAttributes? })` | Doctype, `<html>`, head, and body. Defaults to HTML5 + `lang="en"`. Attributes accept a raw string or a structured map. |
 
 Omitted strings render empty. The button is present only when both `ctaLabel` and `ctaUrl` are set. The unsubscribe link is present only when `unsubscribeUrl` is set.
 
 `bodyText`, `content`, and slot strings may contain inline HTML. Callers own that markup. `escapeHtml` is exported for text and attribute positions; the shell does not call it.
 
-Subpath exports: `@llazyemail/template-runtime-display/escape`, `/head`, `/body`, and `/main`.
+Subpath exports: `@llazyemail/template-runtime-display/escape`, `/head`, `/body`, `/main`, and `/document`.
 
 ## Scripts
 
