@@ -149,10 +149,15 @@ describe('renderEmail', () => {
         bodyAttributes: 'style="margin:0"',
       },
     });
-    const html = renderEmail(template, { title: 'Hi', bodyAttributes: 'style="padding:0"' }).html;
-    expect(html).toMatch(/^<!DOCTYPE html PUBLIC/);
-    expect(html).toContain('<html xmlns="http://www.w3.org/1999/xhtml">');
-    expect(html).not.toContain('lang=');
+    const html = renderEmail(template, {
+      title: 'Hi',
+      doctype: '<!DOCTYPE html>',
+      lang: 'fr',
+      htmlAttributes: 'class="override"',
+      bodyAttributes: 'style="padding:0"',
+    }).html;
+    expect(html).toMatch(/^<!DOCTYPE html>/);
+    expect(html).toContain('<html lang="fr" class="override">');
     expect(html).toContain('<body style="padding:0">');
   });
 

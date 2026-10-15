@@ -29,7 +29,7 @@ npm run smoke          # load the ESM, CJS, and IIFE builds; requires dist/
 npm run check          # format, lint, typecheck, build, test, smoke, publint
 ```
 
-Node.js **24+**. Run `npm run check` before handing work back. Run `npm run test:coverage` when you add or change an executable `src/` file. `src/index.ts`, `src/runtime/types.ts`, and `src/templates/email/types.ts` are excluded: v8 reports 0% on files with no runtime code.
+Node.js **24+**. Run `npm run check` before handing work back. Run `npm run test:coverage` when you add or change an executable `src/` file. `src/index.ts`, `src/runtime/types.ts`, `src/templates/email/types.ts`, and `src/templates/document/index.ts` are excluded: v8 reports 0% on files with no runtime code.
 
 ESLint and Prettier both run in CI. Tests are Vitest, not Jest. `markup-generator` is a devDependency used to write rendered HTML in `test/write.test.ts` and `npm run generate`. It is not a runtime dependency.
 
