@@ -107,7 +107,7 @@ The email preset calls these. They stay public so a part, or a caller, can use t
 | `footer({ companyName?, unsubscribeUrl? })`                                                          | `<footer>` with the company name and an optional unsubscribe link                                                         |
 | `body({ preheaderHtml?, mainHtml?, footerHtml?, attributes? })`                                      | `<body>` around an optional preheader, main, and footer. Optional raw attributes.                                         |
 | `content({ content? })`                                                                              | A `<div>` around raw HTML. The email shell does not call it                                                               |
-| `document({ headHtml?, mainHtml?, footerHtml?, doctype?, lang?, htmlAttributes?, bodyAttributes? })` | Doctype, `<html>`, head, and body. Defaults to HTML5 + `lang="en"`. Supports XHTML, omitting `lang`, and body attributes. |
+| `document({ headHtml?, mainHtml?, footerHtml?, doctype?, lang?, htmlAttributes?, bodyAttributes? })` | Doctype, `<html>`, head, and body. Defaults to HTML5 + `lang="en"`. Attributes accept a raw string or a structured map. |
 
 Omitted strings render empty. The button is present only when both `ctaLabel` and `ctaUrl` are set. The unsubscribe link is present only when `unsubscribeUrl` is set.
 

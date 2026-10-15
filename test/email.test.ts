@@ -138,6 +138,24 @@ describe('renderEmail', () => {
     expect(html.startsWith('<!DOCTYPE html>')).toBe(true);
   });
 
+  it('applies template-level shell defaults, with props winning', () => {
+    const template = defineEmailTemplate({
+      id: 'postmark-like',
+      shell: {
+        doctype:
+          '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">',
+        lang: false,
+        htmlAttributes: { xmlns: 'http://www.w3.org/1999/xhtml' },
+        bodyAttributes: 'style="margin:0"',
+      },
+    });
+    const html = renderEmail(template, { title: 'Hi', bodyAttributes: 'style="padding:0"' }).html;
+    expect(html).toMatch(/^<!DOCTYPE html PUBLIC/);
+    expect(html).toContain('<html xmlns="http://www.w3.org/1999/xhtml">');
+    expect(html).not.toContain('lang=');
+    expect(html).toContain('<body style="padding:0">');
+  });
+
   it('forwards document shell options from EmailProps', () => {
     const html = renderEmail(
       { id: 'styled' },

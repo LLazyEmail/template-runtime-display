@@ -17,8 +17,12 @@ export interface EmailProps extends DocumentShellOptions {
  * An email-shaped template. `parts` are custom steps inserted inside `<body>`
  * after `main` and before `footer`. Built-in `head`, `main`, and `footer`
  * stay in place. A slot with the same id replaces that built-in part.
+ *
+ * `shell` holds default document options for this template. Per-render
+ * `EmailProps` override them.
  */
 export interface EmailTemplate {
   id: string;
   parts?: readonly TemplatePart<EmailProps>[];
+  shell?: DocumentShellOptions;
 }
