@@ -97,12 +97,13 @@ describe('document', () => {
   it('accepts structured attributes on html and body', () => {
     const html = document({
       lang: false,
-      htmlAttributes: { xmlns: 'http://www.w3.org/1999/xhtml', class: 'email' },
-      bodyAttributes: { style: 'margin:0', 'data-theme': 'light' },
+      htmlAttributes: { xmlns: 'http://www.w3.org/1999/xhtml', class: 'email', hidden: true },
+      bodyAttributes: { style: 'margin:0', 'data-theme': 'light', disabled: false },
       mainHtml: '<p>Hi</p>',
     });
-    expect(html).toContain('<html xmlns="http://www.w3.org/1999/xhtml" class="email">');
+    expect(html).toContain('<html xmlns="http://www.w3.org/1999/xhtml" class="email" hidden>');
     expect(html).toContain('<body style="margin:0" data-theme="light">');
+    expect(html).not.toContain('disabled');
   });
 
   it('supports body attributes and omitting lang (good-news style)', () => {

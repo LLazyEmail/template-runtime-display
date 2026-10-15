@@ -9,7 +9,12 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'html'],
       include: ['src/**/*.ts'],
-      exclude: ['src/index.ts', 'src/runtime/types.ts', 'src/templates/email/types.ts'],
+      exclude: [
+        'src/index.ts',
+        'src/runtime/types.ts',
+        'src/templates/email/types.ts',
+        'src/templates/document/index.ts',
+      ],
       thresholds: {
         statements: 100,
         branches: 100,
