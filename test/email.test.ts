@@ -138,6 +138,21 @@ describe('renderEmail', () => {
     expect(html.startsWith('<!DOCTYPE html>')).toBe(true);
   });
 
+  it('forwards document shell options from EmailProps', () => {
+    const html = renderEmail(
+      { id: 'styled' },
+      {
+        title: 'Hi',
+        lang: false,
+        bodyAttributes: 'style="margin:0;padding:0"',
+        htmlAttributes: 'xmlns="http://www.w3.org/1999/xhtml"',
+      },
+    ).html;
+    expect(html).toContain('<html xmlns="http://www.w3.org/1999/xhtml">');
+    expect(html).not.toContain('lang=');
+    expect(html).toContain('<body style="margin:0;padding:0">');
+  });
+
   it('names the shell part when compose is called without rendered HTML', () => {
     const defined = defineEmailTemplate({ id: 'letter' });
     expect(() => defined.compose({}, { templateId: 'letter', props: {}, slots: {} })).toThrow(

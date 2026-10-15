@@ -3,6 +3,7 @@ import { document } from '../document/document';
 import { hasSlot, slot } from '../../runtime/render';
 import type { RenderContext, TemplatePart } from '../../runtime/types';
 import type { EmailProps } from './types';
+import { pickDefined } from '../../utils/pickDefined';
 
 const SHELL_PARTS = new Set(['head', 'main', 'footer']);
 
@@ -26,7 +27,10 @@ export function shellPart(
 }
 
 /** Place custom part HTML inside `<body>`, after `main` and before `footer`. */
-export function composeEmail(parts: Readonly<Record<string, string>>): string {
+export function composeEmail(
+  parts: Readonly<Record<string, string>>,
+  props: EmailProps = {},
+): string {
   // Read the shell before custom ids. Key order is the part list.
   const headHtml = readPart(parts, 'head');
   const mainPiece = readPart(parts, 'main');
@@ -34,5 +38,21 @@ export function composeEmail(parts: Readonly<Record<string, string>>): string {
   const extraHtml = extraIds.map((id) => readPart(parts, id)).join('\n');
   const footerHtml = readPart(parts, 'footer');
   const mainHtml = extraIds.length > 0 ? `${mainPiece}\n${extraHtml}` : mainPiece;
-  return document({ headHtml, mainHtml, footerHtml });
+
+  const { doctype, lang, htmlAttributes, bodyAttributes } = props;
+
+  const shell = pickDefined({
+    doctype,
+    htmlAttributes,
+    bodyAttributes,
+    ...(typeof lang === 'string' ? { lang } : {}),
+  });
+
+  return document({
+    headHtml,
+    mainHtml,
+    footerHtml,
+    ...shell,
+    ...(lang === false || lang === null ? { lang } : {}),
+  });
 }
