@@ -32,6 +32,7 @@ export default defineConfig([
       head: 'src/templates/head/head.ts',
       body: 'src/templates/body/body.ts',
       main: 'src/templates/main/main.ts',
+      document: 'src/templates/document/index.ts',
     },
     format: ['esm', 'cjs'],
     clean: false,

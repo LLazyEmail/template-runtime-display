@@ -1,5 +1,5 @@
 import type { TemplatePart } from '../../runtime/types';
-import type { DocumentShellOptions } from '../document/document';
+import type { DocumentShellOptions } from '../document';
 
 /** Flat props for the built-in email shell. Every field is optional. */
 export interface EmailProps extends DocumentShellOptions {
