@@ -39,7 +39,7 @@ export function defineEmailTemplate(input: EmailTemplate): Template<EmailProps> 
         ),
       ),
     ],
-    compose: (parts) => composeEmail(parts),
+    compose: (parts, ctx) => composeEmail(parts, ctx.props),
   });
 }
 
