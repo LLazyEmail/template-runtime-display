@@ -78,6 +78,35 @@ describe('document', () => {
     expect(html).toContain('</html>');
     expect(html).not.toContain('undefined');
   });
+
+  it('supports a custom doctype and html attributes (XHTML case)', () => {
+    const html = document({
+      doctype:
+        '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">',
+      lang: false,
+      htmlAttributes: 'xmlns="http://www.w3.org/1999/xhtml"',
+      headHtml: '<head><title>Postmark</title></head>',
+      mainHtml: '<table></table>',
+    });
+    expect(html).toMatch(/^<!DOCTYPE html PUBLIC/);
+    expect(html).toContain('<html xmlns="http://www.w3.org/1999/xhtml">');
+    expect(html).not.toContain('lang=');
+    expect(html).toContain('<title>Postmark</title>');
+  });
+
+  it('supports body attributes and omitting lang (good-news style)', () => {
+    const html = document({
+      lang: null,
+      bodyAttributes: 'style="background-color:#f4f4f4;height:100%;margin:0;padding:0"',
+      mainHtml: '<div>Good news</div>',
+    });
+    expect(html).toContain('<html>');
+    expect(html).not.toContain('lang=');
+    expect(html).toContain(
+      '<body style="background-color:#f4f4f4;height:100%;margin:0;padding:0">',
+    );
+    expect(html).toContain('<div>Good news</div>');
+  });
 });
 
 describe('body', () => {

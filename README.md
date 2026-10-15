@@ -100,14 +100,14 @@ renderTemplate(page, { title: 'Hello' }, { slots: { extra: '<p>More</p>' } });
 
 The email preset calls these. They stay public so a part, or a caller, can use them directly.
 
-| Function                                                        | Role                                                                             |
-| --------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| `head({ title?, preview?, styles?, extraHead? })`               | `<head>` with inbox meta, `<title>`, optional preheader, styles, extra HTML      |
-| `main({ heading?, bodyText?, ctaLabel?, ctaUrl?, innerHtml? })` | `<main>` with an `<h1>`, a paragraph, and an optional button, or raw `innerHtml` |
-| `footer({ companyName?, unsubscribeUrl? })`                     | `<footer>` with the company name and an optional unsubscribe link                |
-| `body({ preheaderHtml?, mainHtml?, footerHtml? })`              | `<body>` around an optional preheader, main, and footer                          |
-| `content({ content? })`                                         | A `<div>` around raw HTML. The email shell does not call it                      |
-| `document({ headHtml?, mainHtml?, footerHtml? })`               | Doctype, `<html lang="en">`, head, and body                                      |
+| Function                                                                                             | Role                                                                                                                      |
+| ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `head({ title?, preview?, styles?, extraHead? })`                                                    | `<head>` with inbox meta, `<title>`, optional preheader, styles, extra HTML                                               |
+| `main({ heading?, bodyText?, ctaLabel?, ctaUrl?, innerHtml? })`                                      | `<main>` with an `<h1>`, a paragraph, and an optional button, or raw `innerHtml`                                          |
+| `footer({ companyName?, unsubscribeUrl? })`                                                          | `<footer>` with the company name and an optional unsubscribe link                                                         |
+| `body({ preheaderHtml?, mainHtml?, footerHtml?, attributes? })`                                      | `<body>` around an optional preheader, main, and footer. Optional raw attributes.                                         |
+| `content({ content? })`                                                                              | A `<div>` around raw HTML. The email shell does not call it                                                               |
+| `document({ headHtml?, mainHtml?, footerHtml?, doctype?, lang?, htmlAttributes?, bodyAttributes? })` | Doctype, `<html>`, head, and body. Defaults to HTML5 + `lang="en"`. Supports XHTML, omitting `lang`, and body attributes. |
 
 Omitted strings render empty. The button is present only when both `ctaLabel` and `ctaUrl` are set. The unsubscribe link is present only when `unsubscribeUrl` is set.
 

@@ -103,7 +103,16 @@ document({
 
 ## document(props?: DocumentProps): string
 
-`DocumentProps` is `BodyProps` plus `headHtml`.
+`DocumentProps` is `BodyProps` plus `headHtml` and the shell options below.
+
+| Prop | Default / behaviour |
+|---|---|
+| `doctype` | `<!DOCTYPE html>` |
+| `lang` | `"en"`. Pass `false` or `null` to omit the attribute |
+| `htmlAttributes` | raw extra attributes on `<html>` (e.g. `xmlns="..."`) |
+| `bodyAttributes` | raw extra attributes on `<body>` (e.g. `style="margin:0"`) |
+| `headHtml` | empty |
+| (BodyProps) | passed through to `body` |
 
 ```ts
 document({
@@ -113,7 +122,7 @@ document({
 });
 ```
 
-Shape:
+Shape (defaults):
 
 ```html
 <!DOCTYPE html>
@@ -126,7 +135,9 @@ Shape:
 </html>
 ```
 
-`lang` is fixed to `en`. `document()` with no props is a shell: doctype, html, empty head slot, empty body.
+`document()` with no props is a shell: doctype, html, empty head slot, empty body.
+
+The same options are available on `EmailProps`, so `renderEmail` / `defineEmailTemplate` can produce XHTML or styled-body documents without a custom compose.
 
 ## head(props?: HeadProps): string
 

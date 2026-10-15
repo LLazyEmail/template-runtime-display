@@ -43,4 +43,4 @@ export { content } from './templates/content/content';
 export type { ContentProps } from './templates/content/content';
 
 export { document } from './templates/document/document';
-export type { DocumentProps } from './templates/document/document';
+export type { DocumentProps, DocumentShellOptions } from './templates/document/document';

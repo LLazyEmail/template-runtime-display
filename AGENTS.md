@@ -99,7 +99,7 @@ Traces and defined templates are frozen so a later template cannot change an ear
 - Omitted optional strings render as empty strings. Output must not contain the word `undefined`.
 - `main` emits the CTA `<a>` only when both `ctaLabel` and `ctaUrl` are set.
 - `footer` emits `Unsubscribe` only when `unsubscribeUrl` is set.
-- `document` starts with `<!DOCTYPE html>`, then `<html lang="en">`. `lang` stays `en`.
+- `document` starts with the configured doctype (default `<!DOCTYPE html>`), then an `<html>` tag. `lang` defaults to `en` and can be omitted with `false`/`null`. Additional raw `htmlAttributes` and `bodyAttributes` are supported. Defaults preserve the original HTML5 behaviour.
 - `head` always emits charset `utf-8`, the viewport meta, a `<title>`, and the hidden preview `<div>`.
 - Props and slots are interpolated raw. This package has no escape step. Keep it that way unless the task asks for escaping.
 - `bodyText`, `content`, and slot strings are allowed to contain HTML.
