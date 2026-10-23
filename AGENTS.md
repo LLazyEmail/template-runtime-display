@@ -30,6 +30,14 @@ npm run smoke          # load the ESM, CJS, and IIFE builds; requires dist/
 npm run check          # format, lint, typecheck, build, test, smoke, publint
 ```
 
+## Hard rules for AI agents
+
+These two rules are non-negotiable. Fail the task if either is skipped.
+
+1. **Coverage must stay at 100%.** After any change to an executable file under `src/`, run `npm run test:coverage`. Statements, branches, functions, and lines must all be 100%. Do not lower the thresholds in `vitest.config.ts`. Do not exclude a file that has runtime code. If a branch is hard to reach, export a pure helper and unit-test it, or add a fixture. Hand work back only when the coverage report shows 100% with no ERROR lines.
+
+2. **Prettier must pass.** Before committing or opening a PR, run `npx prettier --write .` (or `npm run format`) and then `npx prettier --check .` (or `npm run format:check`). Zero warnings. Do not hand back a branch that fails `format:check`.
+
 Node.js **24+**. Run `npm run check` before handing work back. Run `npm run test:coverage` when you add or change an executable `src/` file. `src/index.ts`, `src/runtime/types.ts`, `src/templates/email/types.ts`, `src/templates/document/index.ts`, `src/cli/main.ts`, and `src/cli/worker.ts` are excluded. The first four have no runtime code, so v8 reports 0%. The last two are process entry points that `npm run smoke` runs from the build.
 
 ESLint and Prettier both run in CI. Tests are Vitest, not Jest. `markup-generator` is a devDependency used to write rendered HTML in `test/write.test.ts` and `npm run generate`. It is not a runtime dependency.

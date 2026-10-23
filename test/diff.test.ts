@@ -220,9 +220,11 @@ describe('formatDiff', () => {
   });
 });
 
-  it('treats a missing html field as empty when a part is added', () => {
-    const before = result([]);
-    const after = result([{ id: 'fresh', status: 'ok', html: undefined as unknown as string, chars: 0, ms: 0 }]);
-    const diff = diffRenders(before, after);
-    expect(diff.parts[0]).toMatchObject({ id: 'fresh', change: 'added' });
-  });
+it('treats a missing html field as empty when a part is added', () => {
+  const before = result([]);
+  const after = result([
+    { id: 'fresh', status: 'ok', html: undefined as unknown as string, chars: 0, ms: 0 },
+  ]);
+  const diff = diffRenders(before, after);
+  expect(diff.parts[0]).toMatchObject({ id: 'fresh', change: 'added' });
+});
