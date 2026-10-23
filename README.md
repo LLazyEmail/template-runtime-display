@@ -205,8 +205,6 @@ npm run check        # format, lint, typecheck, build, test, smoke, publint
 
 MIT
 
-
 ## Planned: Email Quality Toolkit
 
 See [docs/email-quality-toolkit.md](./docs/email-quality-toolkit.md) for the proposed lint, plain-text, dark-mode and size checks that will attach as `result.quality` on renders. This is future work; the current release adds the inspector and CLI only.
-
