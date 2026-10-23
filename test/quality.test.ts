@@ -285,4 +285,9 @@ describe('toText', () => {
       ].join('\n'),
     );
   });
+
+  it('keeps an unclosed tag as text instead of looping', () => {
+    expect(toText('before <unclosed after')).toContain('before');
+    expect(toText('before <unclosed after')).toContain('<unclosed');
+  });
 });

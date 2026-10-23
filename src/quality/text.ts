@@ -32,8 +32,27 @@ function decodeEntities(text: string): string {
   });
 }
 
+/** Remove tags with a single linear scan. The regex form can backtrack on
+ *  inputs that start with `<` and contain many `<` with no matching `>`. */
 function stripTags(html: string): string {
-  return html.replace(/<[^>]*>/g, '');
+  let out = '';
+  let i = 0;
+  while (i < html.length) {
+    const open = html.indexOf('<', i);
+    if (open === -1) {
+      out += html.slice(i);
+      break;
+    }
+    out += html.slice(i, open);
+    const close = html.indexOf('>', open + 1);
+    if (close === -1) {
+      // Unclosed tag: keep the rest as text so we never loop.
+      out += html.slice(open);
+      break;
+    }
+    i = close + 1;
+  }
+  return out;
 }
 
 function attribute(tag: string, name: string): string | undefined {
