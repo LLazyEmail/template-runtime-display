@@ -1,5 +1,22 @@
 ## Email quality toolkit: lint, plain text, dark mode and size checks on every render
 
+### Status
+
+Shipped (see [docs/inspector.md](./inspector.md)):
+
+- [x] `toText(html)`: plain-text version
+- [x] `measureSize(result)`: UTF-8 size, Gmail 102 KB clip risk, parts hidden by the clip, unsubscribe-after-clip warning
+- [x] Inspector: size section, plain-text section, Light / Dark preview
+- [x] `traceJson`, `inspect --json`, and `/trace.json`
+- [x] Subpath export `@llazyemail/template-runtime-display/quality`
+
+Still to do: `lintEmail` and its rules, the dark-mode contrast and image rules, `renderEmail(..., { check: true })` and `result.quality`, `inspect --fail-on`, and findings in the inspector.
+
+Decisions made while building the first slice:
+
+- The functions are pure and exported on their own, so they work on any `RenderResult` today. `result.quality` can wrap them later without changing them.
+- The Light / Dark toggle pins `color-scheme` on the root of each previewed document instead of relying on the frame, because a frame follows the viewer's system setting. It does not run `prefers-color-scheme` rules. The dark-mode rules planned below must therefore analyse the CSS rather than rely on the preview.
+
 ### Why
 
 The runtime answers "which part broke?" (a part threw). It does not answer the question that actually costs email teams money: **"which part will break in the inbox?"** An email can render with `ok: true` and still be clipped by Gmail, unreadable in Outlook, or blank in dark mode. Today every one of those is found by sending a test and squinting.
@@ -66,7 +83,7 @@ The shell already emits `color-scheme: light dark` meta. Nothing verifies the co
 
 - Rule `dark-mode-contrast`: parse inline `color` / `background(-color)` pairs, flag combinations that fall below WCAG AA (4.5:1) in either scheme, and flag hard-coded `#fff` backgrounds with no `prefers-color-scheme` override.
 - Rule `dark-mode-images`: images with transparent backgrounds and dark artwork get a warning prompt, since a PNG logo can vanish on a dark canvas.
-- Inspector: add a **Light / Dark** toggle to the document preview (swap `color-scheme` on the sandboxed frame; the meta tag already makes compliant clients follow it). Pure CSS, no script, matching the current toggle.
+- Inspector: a **Light / Dark** toggle on the document preview. Done: each choice shows its own frame with `color-scheme` pinned on the root (see Status).
 
 #### 4. Size and clipping budget
 
@@ -101,16 +118,16 @@ Gmail clips messages over ~102 KB of HTML, and the "View entire message" link hi
 
 - [ ] `lintEmail` with the first eight rules above, each with a passing and a failing fixture
 - [ ] Every finding carries the `partId` it came from when the markup is in a part
-- [ ] `toText` handles headings, lists, links, entities, hidden text, and wrapping, with tests
+- [x] `toText` handles headings, lists, links, entities, hidden text, and wrapping, with tests
 - [ ] `renderEmail(..., { check: true })` returns `quality`; default output is byte-identical to today
-- [ ] Dark-mode contrast rule plus the Light/Dark preview toggle
-- [ ] Size budget with UTF-8 bytes and footer-clipping warning
+- [ ] Dark-mode contrast rule (the Light/Dark preview toggle is done)
+- [x] Size budget with UTF-8 bytes and footer-clipping warning
 - [ ] Inspector section for findings; CLI `--fail-on`
 - [ ] README, AGENTS.md, llms.txt, llms-full.txt updated; `npm run check` green
 
 ### Suggested order
 
-1. Size budget and `toText`: smallest, most certain value.
+1. ~~Size budget and `toText`~~: shipped.
 2. Linter core and the first rules, with inspector section and `--fail-on`.
 3. Dark mode.
 4. Remaining rules, driven by what real templates in the org trip over. Run the linter over the existing LLazyEmail templates first and keep only rules that find something real.

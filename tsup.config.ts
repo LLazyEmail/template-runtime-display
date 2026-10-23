@@ -33,6 +33,7 @@ export default defineConfig([
       body: 'src/templates/body/body.ts',
       main: 'src/templates/main/main.ts',
       document: 'src/templates/document/index.ts',
+      quality: 'src/quality/index.ts',
     },
     format: ['esm', 'cjs'],
     clean: false,
