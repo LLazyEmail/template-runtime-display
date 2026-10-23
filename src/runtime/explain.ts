@@ -1,4 +1,5 @@
 import { RenderError } from '@llazyemail/render-template';
+import { fromError } from './result';
 import type { RenderResult } from './types';
 
 /** One text block for logs. Full HTML stays on each part trace. */
@@ -18,13 +19,4 @@ export function explain(result: RenderResult | RenderError): string {
     lines.push(`  compose error ${report.composeError.name}: ${report.composeError.message}`);
   }
   return lines.join('\n');
-}
-
-function fromError(error: RenderError): RenderResult {
-  return {
-    templateId: error.templateId,
-    ok: false,
-    html: '',
-    parts: error.trace,
-  };
 }

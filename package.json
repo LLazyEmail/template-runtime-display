@@ -1,13 +1,16 @@
 {
   "name": "@llazyemail/template-runtime-display",
   "version": "1.0.0",
-  "description": "Standalone runtime that renders a whole HTML email from named parts and records which part broke.",
+  "description": "Standalone runtime that renders a whole HTML email from named parts, shows which part broke, and ships a live inspector.",
   "type": "module",
   "license": "MIT",
   "author": "LLazyEmail",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "bin": {
+    "template-runtime-display": "./dist/cli.js"
+  },
   "exports": {
     ".": {
       "import": {
@@ -96,7 +99,9 @@
     "format:check": "prettier --check .",
     "generate": "npm run build && node scripts/generate.mjs",
     "check": "npm run format:check && npm run lint && npm run typecheck && npm run build && npm test && npm run smoke && npm run publint",
-    "prepublishOnly": "npm run check"
+    "prepublishOnly": "npm run check",
+    "demo": "npm run build && node dist/cli.js dev examples/inspect-demo.mjs",
+    "inspect": "node dist/cli.js inspect"
   },
   "engines": {
     "node": ">=24"
@@ -136,7 +141,10 @@
     "debug",
     "llazyemail",
     "esm",
-    "escape"
+    "escape",
+    "inspector",
+    "dev-server",
+    "live-reload"
   ],
   "dependencies": {
     "@llazyemail/render-template": "github:LLazyEmail/render-template#0.3.0"

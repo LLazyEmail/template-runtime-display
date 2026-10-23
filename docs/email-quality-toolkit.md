@@ -18,31 +18,31 @@ Ship as four independent pieces, each its own PR, so any can land without the ot
 
 ```ts
 interface Finding {
-  rule: string;            // 'no-flex-layout'
+  rule: string; // 'no-flex-layout'
   severity: 'error' | 'warn' | 'info';
-  partId?: string;         // which part produced it, from the trace
-  message: string;         // what is wrong, in one line
-  fix?: string;            // what to do instead
-  clients?: string[];      // ['outlook-windows', 'gmail-android']
-  excerpt?: string;        // the offending markup, trimmed
+  partId?: string; // which part produced it, from the trace
+  message: string; // what is wrong, in one line
+  fix?: string; // what to do instead
+  clients?: string[]; // ['outlook-windows', 'gmail-android']
+  excerpt?: string; // the offending markup, trimmed
 }
 ```
 
 First rules (each is one small function plus tests with a passing and a failing fixture):
 
-| Rule | Catches | Why it matters |
-| --- | --- | --- |
-| `no-flex-grid-layout` | `display:flex`, `display:grid`, `float` used for layout | Outlook for Windows renders with Word; layout collapses |
-| `no-external-stylesheet` | `<link rel=stylesheet>` | Stripped by most clients |
-| `no-script-or-form` | `<script>`, `<form>`, `<iframe>`, `<video>` | Removed or blocked; a form is a deliverability risk |
-| `style-in-head-only` | critical styles only in `<style>` with no inline fallback | Gmail drops `<style>` in some account types |
-| `img-needs-alt-and-size` | `<img>` without `alt`, `width`, `height` | Blocked images collapse the layout; spam-filter signal |
-| `no-svg-background` | SVG images and CSS `background-image` for key content | Not supported in Outlook / some Gmail |
-| `button-needs-table` | `<a>` styled as a button with padding only | Padding is ignored on `<a>` in Outlook |
-| `link-hygiene` | `href` empty, `#`, `javascript:`, or missing `https` | Broken links, mixed-content warnings |
-| `preheader-length` | preview text under ~40 or over ~110 chars | Inbox shows the preheader after the subject |
-| `html-lang-and-title` | missing `lang`, empty `<title>` | Accessibility and some client rendering |
-| `unsubscribe-present` | no unsubscribe link in a marketing template | Required by Gmail/Yahoo bulk-sender rules and CAN-SPAM |
+| Rule                     | Catches                                                   | Why it matters                                          |
+| ------------------------ | --------------------------------------------------------- | ------------------------------------------------------- |
+| `no-flex-grid-layout`    | `display:flex`, `display:grid`, `float` used for layout   | Outlook for Windows renders with Word; layout collapses |
+| `no-external-stylesheet` | `<link rel=stylesheet>`                                   | Stripped by most clients                                |
+| `no-script-or-form`      | `<script>`, `<form>`, `<iframe>`, `<video>`               | Removed or blocked; a form is a deliverability risk     |
+| `style-in-head-only`     | critical styles only in `<style>` with no inline fallback | Gmail drops `<style>` in some account types             |
+| `img-needs-alt-and-size` | `<img>` without `alt`, `width`, `height`                  | Blocked images collapse the layout; spam-filter signal  |
+| `no-svg-background`      | SVG images and CSS `background-image` for key content     | Not supported in Outlook / some Gmail                   |
+| `button-needs-table`     | `<a>` styled as a button with padding only                | Padding is ignored on `<a>` in Outlook                  |
+| `link-hygiene`           | `href` empty, `#`, `javascript:`, or missing `https`      | Broken links, mixed-content warnings                    |
+| `preheader-length`       | preview text under ~40 or over ~110 chars                 | Inbox shows the preheader after the subject             |
+| `html-lang-and-title`    | missing `lang`, empty `<title>`                           | Accessibility and some client rendering                 |
+| `unsubscribe-present`    | no unsubscribe link in a marketing template               | Required by Gmail/Yahoo bulk-sender rules and CAN-SPAM  |
 
 Rules take the final document **and** per-part HTML, so the finding can say `promo` rather than "somewhere in the email". Rules are plain functions in a list, so callers can add their own. No registry; `lintEmail(result, { rules })` accepts an array.
 
@@ -88,7 +88,7 @@ Gmail clips messages over ~102 KB of HTML, and the "View entire message" link hi
 
 - Zero runtime dependencies: HTML is scanned with small tokenizers and regexes over the markup we generate, not a DOM library. Document that this is a linter for emails (mostly table markup and inline styles), not a general HTML parser, and keep a list of known blind spots in the README.
 - No template registry. Rules are an array of functions passed in.
-- `escapeHtml` is still not applied to props. The linter should *report* unescaped `<` and `&` in text positions rather than fixing them.
+- `escapeHtml` is still not applied to props. The linter should _report_ unescaped `<` and `&` in text positions rather than fixing them.
 - 100% coverage on new executable files.
 
 ### Out of scope
