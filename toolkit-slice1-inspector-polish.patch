@@ -1,0 +1,1857 @@
+From 11157bafa1c431e73107d29fee679dcc10af75a0 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Fri, 23 Oct 2026 23:44:31 +0300
+Subject: [PATCH] Add size budget, plain text, trace JSON and inspector polish
+
+- measureSize: UTF-8 size against Gmail's ~102 KB clip, parts hidden by
+  the clip, unsubscribe-after-clip warning
+- toText: plain-text alternative from the generated HTML
+- traceJson, inspect --json, /trace.json: the render as stable data
+- inspector: size meter, plain-text section, Light/Dark preview with the
+  color scheme pinned per frame, select-all source, prev/next part links
+- ./quality subpath export
+- CLI no longer crashes on a closed stdout
+- docs/inspector.md guide; toolkit doc, README, AGENTS.md, llms files updated
+
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01T1yS8KtBeTUZhn5Ls8JrM7
+---
+ AGENTS.md                     |  17 +-
+ README.md                     |  17 +-
+ docs/email-quality-toolkit.md |  27 ++-
+ docs/inspector.md             | 163 +++++++++++++++++
+ llms-full.txt                 |  16 +-
+ llms.txt                      |  13 ++
+ package.json                  |  10 ++
+ scripts/smoke.mjs             |  27 ++-
+ src/cli/args.ts               |  14 +-
+ src/cli/commands.ts           |  14 +-
+ src/cli/main.ts               |  19 +-
+ src/cli/server.ts             |  18 +-
+ src/index.ts                  |   7 +
+ src/inspect/inspect.ts        |  74 +++++++-
+ src/inspect/json.ts           |  83 +++++++++
+ src/inspect/scheme.ts         |  20 +++
+ src/inspect/styles.ts         |  18 ++
+ src/quality/index.ts          |   4 +
+ src/quality/size.ts           |  97 ++++++++++
+ src/quality/text.ts           | 115 ++++++++++++
+ test/polish.test.ts           | 322 ++++++++++++++++++++++++++++++++++
+ test/quality.test.ts          | 288 ++++++++++++++++++++++++++++++
+ tsup.config.ts                |   1 +
+ vitest.config.ts              |   1 +
+ 24 files changed, 1360 insertions(+), 25 deletions(-)
+ create mode 100644 docs/inspector.md
+ create mode 100644 src/inspect/json.ts
+ create mode 100644 src/inspect/scheme.ts
+ create mode 100644 src/quality/index.ts
+ create mode 100644 src/quality/size.ts
+ create mode 100644 src/quality/text.ts
+ create mode 100644 test/polish.test.ts
+ create mode 100644 test/quality.test.ts
+
+diff --git a/AGENTS.md b/AGENTS.md
+index 58a9758..7f98753 100644
+--- a/AGENTS.md
++++ b/AGENTS.md
+@@ -38,7 +38,7 @@ These two rules are non-negotiable. Fail the task if either is skipped.
+ 
+ 2. **Prettier must pass.** Before committing or opening a PR, run `npx prettier --write .` (or `npm run format`) and then `npx prettier --check .` (or `npm run format:check`). Zero warnings. Do not hand back a branch that fails `format:check`.
+ 
+-Node.js **24+**. Run `npm run check` before handing work back. Run `npm run test:coverage` when you add or change an executable `src/` file. `src/index.ts`, `src/runtime/types.ts`, `src/templates/email/types.ts`, `src/templates/document/index.ts`, `src/cli/main.ts`, and `src/cli/worker.ts` are excluded. The first four have no runtime code, so v8 reports 0%. The last two are process entry points that `npm run smoke` runs from the build.
++Node.js **24+**. Run `npm run check` before handing work back. Run `npm run test:coverage` when you add or change an executable `src/` file. `src/index.ts`, `src/runtime/types.ts`, `src/templates/email/types.ts`, `src/templates/document/index.ts`, `src/quality/index.ts`, `src/cli/main.ts`, and `src/cli/worker.ts` are excluded. The first four and `src/quality/index.ts` are barrels or types with no runtime code, so v8 reports 0%. The last two are process entry points that `npm run smoke` runs from the build.
+ 
+ ESLint and Prettier both run in CI. Tests are Vitest, not Jest. `markup-generator` is a devDependency used to write rendered HTML in `test/write.test.ts` and `npm run generate`. It is not a runtime dependency.
+ 
+@@ -66,6 +66,11 @@ src/runtime/result.ts             fromError(): a thrown RenderError as a failed
+ src/inspect/inspect.ts            inspect(): self-contained HTML report
+ src/inspect/diff.ts               diffRenders, formatDiff, line diff
+ src/inspect/styles.ts             inspector stylesheet
++src/inspect/scheme.ts             withScheme: pin color-scheme on a previewed document
++src/inspect/json.ts               traceJson, traceJsonText
++src/quality/size.ts               byteLength, measureSize (Gmail clip budget)
++src/quality/text.ts               toText (plain-text version)
++src/quality/index.ts              barrel for the ./quality subpath
+ src/cli/args.ts                   parseArgs (pure)
+ src/cli/outcome.ts                runModule: load a user module and render it
+ src/cli/fork.ts                   forkRender: render in a child process with a timeout
+@@ -79,6 +84,8 @@ test/index.test.ts      fragment spec
+ examples/compose.ts    sample letter; sampleHtml is covered by the suite
+ test/inspect.test.ts    inspector page spec
+ test/diff.test.ts       diff spec
++test/quality.test.ts    size and toText spec
++test/polish.test.ts     inspector sections, trace JSON, --json, /trace.json, withScheme
+ test/cli.test.ts        CLI, child process and dev server spec (fixtures in test/fixtures)
+ test/write.test.ts      writes a rendered letter through markup-generator and reads it back
+ scripts/generate.mjs   prints explain() and writes generated/letter.html
+@@ -120,6 +127,14 @@ Traces and defined templates are frozen so a later template cannot change an ear
+ 
+ The CLI loads a module that exports `template`, and optionally `props` and `options`. Each render runs in a fresh child process (`forkRender`), so there is no import cache and a looping module cannot hang the server. The default error mode there is `collect`. `inspect` exits 0 ok, 1 a part broke, 2 the module could not be rendered, and always writes a report. The dev server binds to `127.0.0.1` and answers 403 to non-loopback `Host` headers.
+ 
++## Quality checks
++
++`measureSize`, `toText` and `traceJson` are pure, synchronous and dependency free, and they live in `src/quality/` and `src/inspect/`. They are also exported from `./quality`, so keep `src/quality/` free of imports from `src/cli/` and of Node built-ins. `byteLength` counts UTF-8 by code point so it needs neither `TextEncoder` nor `Buffer`.
++
++`toText` reads the markup this package generates, not arbitrary HTML. Do not grow it into a general parser. `measureSize` finds clipped parts by locating each part's output in the final document; a `compose` that rewrites part output can hide a part from that list.
++
++The Light / Dark preview pins `color-scheme` on the root of each previewed document with `withScheme`. A frame's own scheme follows the viewer's system setting, so relying on the iframe alone makes the toggle do nothing on a light system and makes "Light" turn dark on a dark one. Keep both frames, and keep the injected style after `<head>` or the doctype, never before it.
++
+ ## Invariants
+ 
+ - Named exports only. No default export. Import the package root.
+diff --git a/README.md b/README.md
+index 040a9c9..1d95cfc 100644
+--- a/README.md
++++ b/README.md
+@@ -59,7 +59,20 @@ npx template-runtime-display dev ./letter.mjs --port 4177
+ npx template-runtime-display inspect ./letter.mjs --out report.html
+ ```
+ 
+-Prints the same trace as `explain`, writes the report, and exits `0` when every part rendered, `1` when a part broke, `2` when the module could not be rendered at all. A report is written in every case, so CI can attach it as an artifact.
++Prints the same trace as `explain`, writes the report, and exits `0` when every part rendered, `1` when a part broke, `2` when the module could not be rendered at all. A report is written in every case, so CI can attach it as an artifact. Add `--json trace.json` to also write the trace as data, and `/trace.json` serves the same from `dev`.
++
++### Size, plain text and dark mode
++
++The report also checks the email against the size where Gmail clips it (about 102 KB, counted in UTF-8 bytes), shows the plain-text version, and previews the document in Light or Dark.
++
++```ts
++import { measureSize, toText } from '@llazyemail/template-runtime-display/quality';
++
++measureSize(result).clipRisk; // 'ok' | 'near' | 'over'
++toText(result.html); // the text/plain alternative
++```
++
++The full guide is [docs/inspector.md](./docs/inspector.md).
+ 
+ ### From code
+ 
+@@ -207,4 +220,4 @@ MIT
+ 
+ ## Planned: Email Quality Toolkit
+ 
+-See [docs/email-quality-toolkit.md](./docs/email-quality-toolkit.md) for the proposed lint, plain-text, dark-mode and size checks that will attach as `result.quality` on renders. This is future work; the current release adds the inspector and CLI only.
++See [docs/email-quality-toolkit.md](./docs/email-quality-toolkit.md). The size check, plain-text version and Light / Dark preview have shipped. The client-compatibility linter, the dark-mode contrast rules and `result.quality` are next.
+diff --git a/docs/email-quality-toolkit.md b/docs/email-quality-toolkit.md
+index 829a58d..0ea7849 100644
+--- a/docs/email-quality-toolkit.md
++++ b/docs/email-quality-toolkit.md
+@@ -1,5 +1,22 @@
+ ## Email quality toolkit: lint, plain text, dark mode and size checks on every render
+ 
++### Status
++
++Shipped (see [docs/inspector.md](./inspector.md)):
++
++- [x] `toText(html)`: plain-text version
++- [x] `measureSize(result)`: UTF-8 size, Gmail 102 KB clip risk, parts hidden by the clip, unsubscribe-after-clip warning
++- [x] Inspector: size section, plain-text section, Light / Dark preview
++- [x] `traceJson`, `inspect --json`, and `/trace.json`
++- [x] Subpath export `@llazyemail/template-runtime-display/quality`
++
++Still to do: `lintEmail` and its rules, the dark-mode contrast and image rules, `renderEmail(..., { check: true })` and `result.quality`, `inspect --fail-on`, and findings in the inspector.
++
++Decisions made while building the first slice:
++
++- The functions are pure and exported on their own, so they work on any `RenderResult` today. `result.quality` can wrap them later without changing them.
++- The Light / Dark toggle pins `color-scheme` on the root of each previewed document instead of relying on the frame, because a frame follows the viewer's system setting. It does not run `prefers-color-scheme` rules. The dark-mode rules planned below must therefore analyse the CSS rather than rely on the preview.
++
+ ### Why
+ 
+ The runtime answers "which part broke?" (a part threw). It does not answer the question that actually costs email teams money: **"which part will break in the inbox?"** An email can render with `ok: true` and still be clipped by Gmail, unreadable in Outlook, or blank in dark mode. Today every one of those is found by sending a test and squinting.
+@@ -66,7 +83,7 @@ The shell already emits `color-scheme: light dark` meta. Nothing verifies the co
+ 
+ - Rule `dark-mode-contrast`: parse inline `color` / `background(-color)` pairs, flag combinations that fall below WCAG AA (4.5:1) in either scheme, and flag hard-coded `#fff` backgrounds with no `prefers-color-scheme` override.
+ - Rule `dark-mode-images`: images with transparent backgrounds and dark artwork get a warning prompt, since a PNG logo can vanish on a dark canvas.
+-- Inspector: add a **Light / Dark** toggle to the document preview (swap `color-scheme` on the sandboxed frame; the meta tag already makes compliant clients follow it). Pure CSS, no script, matching the current toggle.
++- Inspector: a **Light / Dark** toggle on the document preview. Done: each choice shows its own frame with `color-scheme` pinned on the root (see Status).
+ 
+ #### 4. Size and clipping budget
+ 
+@@ -101,16 +118,16 @@ Gmail clips messages over ~102 KB of HTML, and the "View entire message" link hi
+ 
+ - [ ] `lintEmail` with the first eight rules above, each with a passing and a failing fixture
+ - [ ] Every finding carries the `partId` it came from when the markup is in a part
+-- [ ] `toText` handles headings, lists, links, entities, hidden text, and wrapping, with tests
++- [x] `toText` handles headings, lists, links, entities, hidden text, and wrapping, with tests
+ - [ ] `renderEmail(..., { check: true })` returns `quality`; default output is byte-identical to today
+-- [ ] Dark-mode contrast rule plus the Light/Dark preview toggle
+-- [ ] Size budget with UTF-8 bytes and footer-clipping warning
++- [ ] Dark-mode contrast rule (the Light/Dark preview toggle is done)
++- [x] Size budget with UTF-8 bytes and footer-clipping warning
+ - [ ] Inspector section for findings; CLI `--fail-on`
+ - [ ] README, AGENTS.md, llms.txt, llms-full.txt updated; `npm run check` green
+ 
+ ### Suggested order
+ 
+-1. Size budget and `toText`: smallest, most certain value.
++1. ~~Size budget and `toText`~~: shipped.
+ 2. Linter core and the first rules, with inspector section and `--fail-on`.
+ 3. Dark mode.
+ 4. Remaining rules, driven by what real templates in the org trip over. Run the linter over the existing LLazyEmail templates first and keep only rules that find something real.
+diff --git a/docs/inspector.md b/docs/inspector.md
+new file mode 100644
+index 0000000..f46ca5a
+--- /dev/null
++++ b/docs/inspector.md
+@@ -0,0 +1,163 @@
++# Inspector guide
++
++The inspector shows what a render did: which part ran, what each one produced, which one broke, and how the finished email will look and weigh. This page covers the report, the live dev server, the JSON trace, and the first two email quality checks (size and plain text).
++
++- [The report](#the-report)
++- [Live dev server](#live-dev-server)
++- [One-shot report for CI](#one-shot-report-for-ci)
++- [JSON trace](#json-trace)
++- [Size check](#size-check)
++- [Plain-text version](#plain-text-version)
++- [Light and Dark preview](#light-and-dark-preview)
++- [From code](#from-code)
++- [What it does not do](#what-it-does-not-do)
++
++## The report
++
++`inspect(result)` returns one HTML page. It has no scripts and makes no network requests, so it is safe to attach to a CI run or send to a teammate.
++
++| Section                    | What it shows                                                                                                                             |
++| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
++| Header                     | Template id, `OK` or `FAILED`, part count, size, total time, slowest part                                                                 |
++| Banner                     | Each broken part with its error, or the compose error, or the part that threw. Links to the part card.                                    |
++| Output by part             | A bar per part sized by its output, with status, characters and time                                                                      |
++| Changes (with `compareTo`) | Which parts changed since an earlier render, and the changed lines                                                                        |
++| Document                   | The finished email in a sandboxed frame at Full, Tablet 768 and Mobile 375, in Light or Dark                                              |
++| Size                       | Bytes against the Gmail clip limit, a meter, the largest parts, and warnings                                                              |
++| Plain-text version         | What `toText` makes of the document, ready to select and copy                                                                             |
++| Parts                      | One card per part: status, a sandboxed preview, and the source. Broken parts open by default. Previous and next links move between cards. |
++
++Safety: every id, message and title is escaped. Part and document HTML appear only inside `<iframe sandbox="">` and escaped `<pre>` blocks, so a hostile part cannot run code in the report. Click a source block and the whole block is selected, ready to copy.
++
++## Live dev server
++
++```bash
++npx template-runtime-display dev ./letter.mjs
++```
++
++The module exports `template` (an email template input or a `Template`) and optionally `props` and `options`.
++
++- `/` is the inspector. It reloads when the module, or anything under its directory, changes. Add directories with `--watch <dir>`.
++- After an edit that changes the output, the page lists which parts changed and shows the changed lines.
++- `/email` is the finished document alone.
++- `/trace.json` is the render as data (see below).
++- Each render runs in a fresh child process with a 10 second limit, so edits are always picked up and a module that crashes or loops forever shows an error page instead of stopping the server.
++- It binds to `127.0.0.1` and answers `403` to any request whose `Host` header is not loopback, which blocks DNS-rebinding pages from reaching it.
++- The CLI renders with `onError: 'collect'` so one broken part does not hide the rest. Set `options.onError` in the module to change that.
++
++Try it: `npm run demo` serves `examples/inspect-demo.mjs`, which has a broken part on purpose. Fix `promoCode`, save, and watch the part turn green and the change appear.
++
++## One-shot report for CI
++
++```bash
++npx template-runtime-display inspect ./letter.mjs --out report.html --json trace.json
++```
++
++| Exit code | Meaning                                                                 |
++| --------- | ----------------------------------------------------------------------- |
++| `0`       | Every part rendered                                                     |
++| `1`       | A part broke, or the render threw                                       |
++| `2`       | The module could not be rendered (syntax error, no `template`, timeout) |
++
++Both files are written in every case, so CI can upload them as artifacts. A crash writes `{ "ok": false, "crash": { "message", "detail"? } }` to the JSON file so a script can always read it. A closed pipe (`... | head`) does not crash the CLI or change its exit code.
++
++## JSON trace
++
++`traceJson(resultOrRenderError, { html? })` returns the render as plain data, and `traceJsonText` returns it as pretty JSON. The shape is stable, so scripts and CI can depend on it.
++
++```json
++{
++  "templateId": "weekly-digest",
++  "ok": false,
++  "size": { "bytes": 993, "limit": 104448, "clipRisk": "ok", "warnings": [] },
++  "parts": [
++    { "id": "head", "status": "ok", "chars": 447, "bytes": 447, "ms": 0.02 },
++    {
++      "id": "promo",
++      "status": "error",
++      "chars": 0,
++      "bytes": 0,
++      "ms": 0.05,
++      "error": { "name": "TypeError", "message": "Cannot read properties of undefined" }
++    }
++  ]
++}
++```
++
++`threw: { partId, message }` is present when the render threw, and `composeError` when `compose` failed. Pass `{ html: true }` to include each part's markup and the document. `bytes` is the UTF-8 size, which is what mail clients count; `chars` is `.length`.
++
++## Size check
++
++Gmail clips a message whose HTML is over about 102 KB and hides the rest behind "View entire message". That hides the footer and the unsubscribe link, which hurts deliverability and breaks bulk-sender rules.
++
++```ts
++import { measureSize } from '@llazyemail/template-runtime-display/quality';
++
++const size = measureSize(result);
++size.clipRisk; // 'ok' | 'near' | 'over'
++size.perPart; // [{ id, bytes }] largest first
++size.clippedParts; // parts that start after the clip point
++size.unsubscribeClipped; // true when the unsubscribe link is after it
++size.warnings; // sentences ready to show
++```
++
++- Size is the UTF-8 byte length of the final document, not `.length`. `€` is 3 bytes.
++- `near` starts at 80 KB, `over` above 102 KB. Both are options: `measureSize(result, { limit, nearLimit })`.
++- Which parts are "hidden by the clip" is found by locating each part's output in the document, so a part whose output the `compose` function rewrites may not be listed.
++
++## Plain-text version
++
++A `text/plain` alternative part improves spam scores and serves readers who prefer text. `toText` makes one from the HTML, with no DOM and no dependency.
++
++```ts
++import { toText } from '@llazyemail/template-runtime-display/quality';
++
++toText(result.html); // wrapped at 78 columns
++toText(result.html, { width: 0 }); // no wrapping
++```
++
++| In the HTML                                                      | In the text                                        |
++| ---------------------------------------------------------------- | -------------------------------------------------- |
++| `<h1>`..`<h6>`                                                   | Uppercase line with blank lines around it          |
++| `<p>`, `<div>`, table rows                                       | Paragraphs separated by a blank line               |
++| `<li>`                                                           | `- item`, wrapped lines indented                   |
++| `<a href="u">label</a>`                                          | `label (u)`, or just `u` when the label is the URL |
++| `<img alt="x">`                                                  | `[x]`. Images without alt text are dropped         |
++| `<span class="preheader">`                                       | First line                                         |
++| `<head>`, `<style>`, `<script>`, comments, `display:none` blocks | Dropped                                            |
++| `&amp;`, `&mdash;`, `&#8364;`                                    | Decoded                                            |
++
++It reads the markup this package generates (headings, paragraphs, lists, links, tables), not arbitrary HTML. Links whose `href` is empty, `#` or `javascript:` print only their label.
++
++## Light and Dark preview
++
++The Document section has a Light and a Dark choice next to the width choices. Each choice shows its own frame with the color scheme pinned on the root element, so the result is the same whatever your system setting is.
++
++This previews a client that supports `color-scheme`: the default canvas and text colors change. It does not run your own `@media (prefers-color-scheme: dark)` rules, because those follow the system setting. To see them, change your system setting. Emails with hard-coded `#fff` backgrounds stay white in both, which is exactly what you would see in a client that does not invert colors.
++
++## From code
++
++```ts
++import {
++  diffRenders,
++  formatDiff,
++  inspect,
++  renderEmail,
++  traceJsonText,
++} from '@llazyemail/template-runtime-display';
++
++const before = renderEmail(template, props, { onError: 'collect' });
++const after = renderEmail(template, { ...props, code: 'save20' }, { onError: 'collect' });
++
++writeFileSync('report.html', inspect(after, { compareTo: before }));
++writeFileSync('trace.json', traceJsonText(after));
++console.log(formatDiff(diffRenders(before, after)));
++```
++
++`inspect`, `traceJson`, `diffRenders`, `measureSize` and `toText` are pure. None does I/O.
++
++## What it does not do
++
++- It does not render in real mail clients. The preview is your browser. Outlook for Windows renders with Word and will differ.
++- It does not lint markup for client compatibility yet. That is the next piece of the [email quality toolkit](./email-quality-toolkit.md).
++- The dev server renders one module. It is a development tool, not a production server.
+diff --git a/llms-full.txt b/llms-full.txt
+index 3c4e2f2..999367e 100644
+--- a/llms-full.txt
++++ b/llms-full.txt
+@@ -195,12 +195,24 @@ Safety: no `<script>`, no `<link>`, no network requests. Every id, message, titl
+ 
+ Compares two `RenderResult`s. Parts match by id, so reordering alone is not a change. `RenderDiff` is `{ templateBefore, templateAfter, changed, parts: PartDiff[], lines: DiffLine[] }`. `PartDiff` is `{ id, change: 'added' | 'removed' | 'changed' | 'unchanged', statusBefore?, statusAfter?, charsDelta, lines }`. `DiffLine` is `{ kind: 'same' | 'add' | 'del', text }`. `changed` is true when the document or any part (HTML or status) differs. Very large diffs fall back to replacing the changed block. `formatDiff` prints changed parts, then changed lines with two lines of context.
+ 
++## measureSize(result, options?): SizeReport
++
++From `@llazyemail/template-runtime-display` and `@llazyemail/template-runtime-display/quality`. `options`: `{ limit?: number; nearLimit?: number }`, default 102 KB (`CLIP_BYTES`) and 80 KB (`NEAR_BYTES`). `SizeReport` is `{ bytes, limit, nearLimit, clipRisk: 'ok' | 'near' | 'over', perPart: { id, bytes }[], clippedParts: string[], unsubscribeClipped: boolean, warnings: string[] }`. `bytes` is the UTF-8 length of `result.html`. `perPart` lists parts with output, largest first. `clipRisk` is `over` above `limit`, `near` above `nearLimit`. `clippedParts` is filled only when `over`, with the parts whose output starts after the clip point. `unsubscribeClipped` is true when the first `unsubscribe` in the document is after it. `byteLength(text)` is the UTF-8 length of a string.
++
++## toText(html, options?): string
++
++`options`: `{ width?: number }`, default 78, `0` for no wrapping. Headings become uppercase, paragraphs are separated by a blank line, `<li>` becomes `- item`, `<a href="u">label</a>` becomes `label (u)` (or `u` when they match, or `label` when the href is empty, `#` or `javascript:`), `<img alt>` becomes `[alt]`. The `preheader` span is the first line. `<head>`, `<style>`, `<script>`, comments and `display:none` blocks are dropped. Entities are decoded. It reads the markup this package generates, not arbitrary HTML. Empty input gives `''`; otherwise the text ends with one newline.
++
++## traceJson(input, options?): TraceJson and traceJsonText(input, options?): string
++
++`input` is a `RenderResult` or a thrown `RenderError`. `options`: `{ html?: boolean }`. `TraceJson` is `{ templateId, ok, threw?: { partId, message }, composeError?, size: { bytes, limit, clipRisk, warnings }, parts: { id, status, chars, bytes, ms, error?, html? }[], html? }`. `traceJsonText` is the same as pretty JSON with a trailing newline. The shape is stable.
++
+ ## CLI: template-runtime-display
+ 
+ `bin` in `package.json`. Node-only, not part of the library entry point, and the library keeps no dependency on it.
+ 
+-- `dev <module> [--port 4177] [--host 127.0.0.1] [--watch <dir>]...` serves the inspector at `/`, the bare document at `/email`, and reloads open pages when a file under the module's directory (or a `--watch` directory) changes. Each render runs in a fresh child process with a 10 second limit. Non-loopback `Host` headers get 403 when bound to loopback.
+-- `inspect <module> [--out inspect.html]` renders once, prints `explain`, writes the report. Exit `0` ok, `1` a part broke or a throw, `2` the module could not be rendered.
++- `dev <module> [--port 4177] [--host 127.0.0.1] [--watch <dir>]...` serves the inspector at `/`, the bare document at `/email`, the trace at `/trace.json` (404 when the module could not be rendered), and reloads open pages when a file under the module's directory (or a `--watch` directory) changes. Each render runs in a fresh child process with a 10 second limit. Non-loopback `Host` headers get 403 when bound to loopback.
++- `inspect <module> [--out inspect.html] [--json trace.json]` renders once, prints `explain`, writes the report, and with `--json` the trace. Exit `0` ok, `1` a part broke or a throw, `2` the module could not be rendered. A crash writes `{ ok: false, crash: { message, detail? } }` to the JSON file. A closed stdout does not crash it.
+ 
+ The module exports `template` (`EmailTemplate` input or `Template<EmailProps>`), and optionally `props` and `options` (`RenderOptions`). A default export with those keys also works. The CLI uses `onError: 'collect'` unless `options.onError` says otherwise.
+ 
+diff --git a/llms.txt b/llms.txt
+index 1e5ac18..ea7cde3 100644
+--- a/llms.txt
++++ b/llms.txt
+@@ -57,3 +57,16 @@ template-runtime-display inspect ./letter.mjs [--out inspect.html]   # exit 0 ok
+ ```
+ 
+ The module exports `template`, and optionally `props` and `options`. The CLI defaults `onError` to `collect`.
++
++## Quality checks
++
++```ts
++import { measureSize, toText } from '@llazyemail/template-runtime-display/quality';
++import { traceJson } from '@llazyemail/template-runtime-display';
++
++measureSize(result); // { bytes, clipRisk: 'ok' | 'near' | 'over', perPart, clippedParts, unsubscribeClipped, warnings }
++toText(result.html); // plain-text alternative, wrapped at 78 columns
++traceJson(result); // status, bytes and ms per part, errors, size check
++```
++
++`bytes` is UTF-8, which is what Gmail counts against its ~102 KB clip. `inspect --json trace.json` writes the trace, and the dev server serves it at `/trace.json`. The report shows size, the plain-text version, and a Light / Dark preview. Guide: docs/inspector.md.
+diff --git a/package.json b/package.json
+index 7954ac9..d3e267e 100644
+--- a/package.json
++++ b/package.json
+@@ -71,6 +71,16 @@
+         "types": "./dist/document.d.cts",
+         "default": "./dist/document.cjs"
+       }
++    },
++    "./quality": {
++      "import": {
++        "types": "./dist/quality.d.ts",
++        "default": "./dist/quality.js"
++      },
++      "require": {
++        "types": "./dist/quality.d.cts",
++        "default": "./dist/quality.cjs"
++      }
+     }
+   },
+   "files": [
+diff --git a/scripts/smoke.mjs b/scripts/smoke.mjs
+index 1a69468..1201cfe 100644
+--- a/scripts/smoke.mjs
++++ b/scripts/smoke.mjs
+@@ -80,7 +80,12 @@ try {
+   writeFileSync(bad, letter(`() => { throw new Error('boom'); }`));
+ 
+   const runs = [
+-    ['clean render exits 0', ['inspect', good, '--out', join(work, 'good.html')], 0, /smoke: ok/],
++    [
++      'clean render exits 0',
++      ['inspect', good, '--out', join(work, 'good.html'), '--json', join(work, 'good.json')],
++      0,
++      /smoke: ok/,
++    ],
+     [
+       'broken part exits 1',
+       ['inspect', bad, '--out', join(work, 'bad.html')],
+@@ -102,6 +107,11 @@ try {
+       process.exit(1);
+     }
+   }
++  const trace = JSON.parse(read(join(work, 'good.json'), 'utf8'));
++  if (trace.templateId !== 'smoke' || trace.ok !== true || trace.size?.clipRisk !== 'ok') {
++    console.error('cli: --json did not write the trace');
++    process.exit(1);
++  }
+   if (!read(join(work, 'bad.html'), 'utf8').includes('1 part broke')) {
+     console.error('cli: the report did not name the broken part');
+     process.exit(1);
+@@ -109,3 +119,18 @@ try {
+ } finally {
+   rmSync(work, { recursive: true, force: true });
+ }
++
++// The quality subpath loads from both builds and does its job.
++const esmQuality = await import('../dist/quality.js');
++const cjsQuality = require('../dist/quality.cjs');
++for (const [name, quality] of [
++  ['esm', esmQuality],
++  ['cjs', cjsQuality],
++]) {
++  const text = quality.toText('<h1>Hi</h1><p>One <a href="https://example.com">link</a></p>');
++  const size = quality.measureSize({ templateId: 't', ok: true, html: '€', parts: [] });
++  if (text !== 'HI\n\nOne link (https://example.com)\n' || size.bytes !== 3) {
++    console.error(`${name} quality build returned an unexpected result`);
++    process.exit(1);
++  }
++}
+diff --git a/src/cli/args.ts b/src/cli/args.ts
+index 11e5ec2..b7f21be 100644
+--- a/src/cli/args.ts
++++ b/src/cli/args.ts
+@@ -2,14 +2,14 @@ export type Command =
+   | { kind: 'help' }
+   | { kind: 'version' }
+   | { kind: 'dev'; file: string; port: number; host: string; watch: string[] }
+-  | { kind: 'inspect'; file: string; out: string }
++  | { kind: 'inspect'; file: string; out: string; json?: string }
+   | { kind: 'error'; message: string };
+ 
+ export const USAGE = `template-runtime-display: see which part of a template broke.
+ 
+ Usage
+   template-runtime-display dev <module> [--port 4177] [--host 127.0.0.1] [--watch <dir>]...
+-  template-runtime-display inspect <module> [--out inspect.html]
++  template-runtime-display inspect <module> [--out inspect.html] [--json trace.json]
+ 
+   dev       Serve a live inspector. Saving the module, or anything it imports from
+             a watched directory, reloads the page.
+@@ -24,6 +24,7 @@ Options
+   --host <h>     Interface for dev. Default 127.0.0.1 (this machine only).
+   --watch <dir>  Also watch this directory. Repeatable.
+   --out <file>   Where inspect writes the report. Default inspect.html.
++  --json <file>  Also write the trace as JSON: status, size and timing per part.
+   -h, --help     Show this help.
+   -v, --version  Show the version.
+ `;
+@@ -47,6 +48,7 @@ export function parseArgs(argv: readonly string[]): Command {
+   let port = 4177;
+   let host = '127.0.0.1';
+   let out = 'inspect.html';
++  let json: string | undefined;
+   const watch: string[] = [];
+ 
+   for (let i = 0; i < rest.length; i += 1) {
+@@ -61,7 +63,7 @@ export function parseArgs(argv: readonly string[]): Command {
+ 
+     const eq = arg.indexOf('=');
+     const flag = eq === -1 ? arg : arg.slice(0, eq);
+-    const allowed = name === 'dev' ? ['--port', '--host', '--watch'] : ['--out'];
++    const allowed = name === 'dev' ? ['--port', '--host', '--watch'] : ['--out', '--json'];
+     if (!allowed.includes(flag)) return fail(`Unknown option "${flag}" for ${name}.`);
+ 
+     const value = eq === -1 ? rest[(i += 1)] : arg.slice(eq + 1);
+@@ -77,11 +79,15 @@ export function parseArgs(argv: readonly string[]): Command {
+       host = value;
+     } else if (flag === '--watch') {
+       watch.push(value);
++    } else if (flag === '--json') {
++      json = value;
+     } else {
+       out = value;
+     }
+   }
+ 
+   if (file === undefined) return fail(`${name} needs a module path. Example: ${name} ./letter.mjs`);
+-  return name === 'dev' ? { kind: 'dev', file, port, host, watch } : { kind: 'inspect', file, out };
++  return name === 'dev'
++    ? { kind: 'dev', file, port, host, watch }
++    : { kind: 'inspect', file, out, ...(json === undefined ? {} : { json }) };
+ }
+diff --git a/src/cli/commands.ts b/src/cli/commands.ts
+index 53bd500..5e19faa 100644
+--- a/src/cli/commands.ts
++++ b/src/cli/commands.ts
+@@ -1,5 +1,6 @@
+ import { explain } from '../runtime/explain';
+ import { inspect } from '../inspect/inspect';
++import { traceJsonText } from '../inspect/json';
+ import type { Outcome } from './outcome';
+ import { crashPage, toInspectable } from './pages';
+ 
+@@ -12,12 +13,15 @@ export interface InspectDeps {
+ /**
+  * Render once, write the report, print the trace. The exit code is 0 when
+  * every part rendered, 1 when a part broke, and 2 when the module could not
+- * be rendered at all. Even then a report is written, so CI can attach it.
++ * be rendered at all. Even then a report is written, so CI can attach it. With
++ * `jsonOut`, the trace is also written as JSON (a crash writes `ok: false` and
++ * the crash message, so a script can always read the file).
+  */
+ export async function inspectCommand(
+   file: string,
+   out: string,
+   deps: InspectDeps,
++  jsonOut?: string,
+ ): Promise<number> {
+   const outcome = await deps.render(file);
+   const inspectable = toInspectable(outcome);
+@@ -25,6 +29,7 @@ export async function inspectCommand(
+   if (!inspectable) {
+     const crashed = outcome as Extract<Outcome, { kind: 'crash' }>;
+     await deps.write(out, crashPage(crashed));
++    if (jsonOut) await deps.write(jsonOut, crashJsonText(crashed));
+     deps.log(`Could not render ${file}: ${crashed.message}`);
+     if (crashed.detail) deps.log(crashed.detail);
+     deps.log(`Report written to ${out}`);
+@@ -32,7 +37,14 @@ export async function inspectCommand(
+   }
+ 
+   await deps.write(out, inspect(inspectable));
++  if (jsonOut) await deps.write(jsonOut, traceJsonText(inspectable));
+   deps.log(explain(inspectable));
+   deps.log(`Report written to ${out}`);
+   return outcome.kind === 'result' && outcome.result.ok ? 0 : 1;
+ }
++
++/** What `--json` writes when there was no render to describe. */
++export function crashJsonText(crashed: Extract<Outcome, { kind: 'crash' }>): string {
++  const { message, detail } = crashed;
++  return `${JSON.stringify({ ok: false, crash: { message, ...(detail ? { detail } : {}) } }, null, 2)}\n`;
++}
+diff --git a/src/cli/main.ts b/src/cli/main.ts
+index 46707de..e0a167d 100644
+--- a/src/cli/main.ts
++++ b/src/cli/main.ts
+@@ -12,6 +12,10 @@ import { startServer } from './server';
+ // Command line bootstrap. Everything it calls is tested; this file only wires them to the process.
+ const command = parseArgs(process.argv.slice(2));
+ const workerPath = fileURLToPath(new URL('./worker.js', import.meta.url));
++// A closed stdout (`... | head`) must not crash the run or change its exit code.
++process.stdout.on('error', (error: NodeJS.ErrnoException) => {
++  if (error.code !== 'EPIPE') throw error;
++});
+ const log = (line: string): void => void process.stdout.write(`${line}\n`);
+ 
+ switch (command.kind) {
+@@ -33,11 +37,16 @@ switch (command.kind) {
+     break;
+ 
+   case 'inspect':
+-    process.exitCode = await inspectCommand(resolve(command.file), command.out, {
+-      render: (file) => forkRender(file, { workerPath }),
+-      write: (file, contents) => writeFile(file, contents, 'utf8'),
+-      log,
+-    });
++    process.exitCode = await inspectCommand(
++      resolve(command.file),
++      command.out,
++      {
++        render: (file) => forkRender(file, { workerPath }),
++        write: (file, contents) => writeFile(file, contents, 'utf8'),
++        log,
++      },
++      command.json,
++    );
+     break;
+ 
+   case 'dev': {
+diff --git a/src/cli/server.ts b/src/cli/server.ts
+index e4c7efc..aef784d 100644
+--- a/src/cli/server.ts
++++ b/src/cli/server.ts
+@@ -9,6 +9,7 @@ import { URL } from 'node:url';
+ import type { RenderError } from '@llazyemail/render-template';
+ import type { RenderResult } from '../runtime/types';
+ import type { Outcome } from './outcome';
++import { traceJsonText } from '../inspect/json';
+ import { outcomePage, renderChanged, toInspectable } from './pages';
+ 
+ export interface DevServerOptions {
+@@ -99,7 +100,7 @@ export function startServer(options: DevServerOptions): Promise<DevServer> {
+       return;
+     }
+ 
+-    if (path !== '/' && path !== '/email') {
++    if (path !== '/' && path !== '/email' && path !== '/trace.json') {
+       send(res, 404, 'text/plain', 'Not found');
+       return;
+     }
+@@ -116,6 +117,21 @@ export function startServer(options: DevServerOptions): Promise<DevServer> {
+       return;
+     }
+ 
++    // `/trace.json` is the render as data, for scripts and other tools.
++    if (path === '/trace.json') {
++      if (!inspectable) {
++        send(
++          res,
++          404,
++          'text/plain',
++          'No trace: the module could not be rendered. Open / to see why.',
++        );
++        return;
++      }
++      send(res, 200, 'application/json', traceJsonText(inspectable));
++      return;
++    }
++
+     // `/email` is the finished document alone, for opening on its own or saving.
+     const html = outcome.kind === 'result' ? outcome.result.html : '';
+     if (html === '') {
+diff --git a/src/index.ts b/src/index.ts
+index d5687f4..b58d2ba 100644
+--- a/src/index.ts
++++ b/src/index.ts
+@@ -24,6 +24,8 @@ export { explain } from './runtime/explain';
+ 
+ export { inspect } from './inspect/inspect';
+ export type { InspectOptions } from './inspect/inspect';
++export { traceJson, traceJsonText } from './inspect/json';
++export type { TraceJson, TraceJsonOptions, TraceJsonPart } from './inspect/json';
+ export { diffRenders, formatDiff } from './inspect/diff';
+ export type { DiffLine, PartChange, PartDiff, RenderDiff } from './inspect/diff';
+ 
+@@ -49,3 +51,8 @@ export type { ContentProps } from './templates/content/content';
+ 
+ export { document, mergeShell, openTag, serializeAttributes } from './templates/document';
+ export type { DocumentProps, DocumentShellOptions, TagAttributes } from './templates/document';
++
++export { byteLength, measureSize, CLIP_BYTES, NEAR_BYTES } from './quality/size';
++export type { ClipRisk, PartSize, SizeOptions, SizeReport } from './quality/size';
++export { toText } from './quality/text';
++export type { TextOptions } from './quality/text';
+diff --git a/src/inspect/inspect.ts b/src/inspect/inspect.ts
+index ddd9720..7cc626c 100644
+--- a/src/inspect/inspect.ts
++++ b/src/inspect/inspect.ts
+@@ -2,8 +2,12 @@ import { RenderError } from '@llazyemail/render-template';
+ import { fromError } from '../runtime/result';
+ import type { PartStatus, PartTrace, RenderResult } from '../runtime/types';
+ import { escapeHtml } from '../utils/escape';
++import { measureSize } from '../quality/size';
++import type { SizeReport } from '../quality/size';
++import { toText } from '../quality/text';
+ import { diffRenders, trimContext } from './diff';
+ import type { DiffLine, RenderDiff } from './diff';
++import { withScheme } from './scheme';
+ import { STYLES } from './styles';
+ 
+ export interface InspectOptions {
+@@ -45,6 +49,8 @@ export function inspect(input: RenderResult | RenderError, options: InspectOptio
+     timeline(result.parts),
+     diff ? diffSection(diff) : '',
+     documentSection(result),
++    sizeSection(result),
++    textSection(result),
+     partsSection(result.parts),
+     '<p class="foot">Generated by @llazyemail/template-runtime-display</p>',
+     '</main>',
+@@ -138,7 +144,10 @@ function documentSection(result: RenderResult): string {
+     '<input type="radio" name="vp" id="vp-full" checked><label for="vp-full">Full</label>',
+     '<input type="radio" name="vp" id="vp-tablet"><label for="vp-tablet">Tablet 768</label>',
+     '<input type="radio" name="vp" id="vp-mobile"><label for="vp-mobile">Mobile 375</label>',
+-    `<div class="stage"><iframe sandbox="" referrerpolicy="no-referrer" title="Rendered document" srcdoc="${escapeHtml(result.html)}"></iframe></div>`,
++    '<input type="radio" name="sc" id="sc-light" checked><label for="sc-light" class="first">Light</label>',
++    '<input type="radio" name="sc" id="sc-dark"><label for="sc-dark">Dark</label>',
++    `<div class="stage"><iframe sandbox="" referrerpolicy="no-referrer" title="Rendered document" class="doc-light" srcdoc="${escapeHtml(withScheme(result.html, 'light'))}"></iframe><iframe sandbox="" referrerpolicy="no-referrer" title="Rendered document, dark" class="doc-dark" srcdoc="${escapeHtml(withScheme(result.html, 'dark'))}"></iframe></div>`,
++    '<p class="note">Light and Dark set the preview\'s color scheme, like a client that supports <code>color-scheme</code>. Your own <code>prefers-color-scheme</code> styles follow your system setting.</p>',
+     '</div>',
+     '</section>',
+   ].join('\n');
+@@ -146,15 +155,16 @@ function documentSection(result: RenderResult): string {
+ 
+ function partsSection(parts: readonly PartTrace[]): string {
+   if (parts.length === 0) return '';
+-  return `<section class="card"><h2>Parts</h2>${parts.map(partCard).join('\n')}</section>`;
++  return `<section class="card"><h2>Parts</h2>${parts.map((part, index) => partCard(part, index, parts.length)).join('\n')}</section>`;
+ }
+ 
+-function partCard(part: PartTrace, index: number): string {
++function partCard(part: PartTrace, index: number, count: number): string {
+   const open = part.status === 'error' ? ' open' : '';
+   return [
+     `<details class="part" id="part-${index}"${open}>`,
+     `<summary><span class="name">${escapeHtml(part.id)}</span> ${chip(part.status)} <span class="meta">${fmtChars(part.chars)} · ${fmtMs(part.ms)}</span></summary>`,
+     partBody(part),
++    partNav(index, count),
+     '</details>',
+   ].join('\n');
+ }
+@@ -194,3 +204,61 @@ function diffLine(line: DiffLine): string {
+   const sign = line.kind === 'add' ? '+' : line.kind === 'del' ? '-' : ' ';
+   return `<span class="d-${line.kind}">${sign} ${escapeHtml(line.text)}</span>`;
+ }
++
++function partNav(index: number, count: number): string {
++  const prev = index > 0 ? `<a href="#part-${index - 1}">&uarr; previous</a>` : '';
++  const next = index < count - 1 ? `<a href="#part-${index + 1}">next &darr;</a>` : '';
++  return prev === '' && next === '' ? '' : `<nav class="pn">${prev}${next}</nav>`;
++}
++
++function fmtBytes(bytes: number): string {
++  return bytes < 1024 ? `${bytes} B` : `${(bytes / 1024).toFixed(1)} KB`;
++}
++
++const RISK_CHIP: Record<SizeReport['clipRisk'], string> = {
++  ok: 's-ok',
++  near: 's-empty',
++  over: 's-error',
++};
++
++function sizeSection(result: RenderResult): string {
++  if (result.html === '') return '';
++  const size = measureSize(result);
++  const fill = Math.min(100, (size.bytes / size.limit) * 100).toFixed(1);
++  const mark = ((size.nearLimit / size.limit) * 100).toFixed(1);
++  const largest = size.perPart
++    .slice(0, 5)
++    .map(
++      (part) =>
++        `<li><span class="name">${escapeHtml(part.id)}</span> <span class="meta">${fmtBytes(part.bytes)}</span></li>`,
++    );
++  const warnings = size.warnings.map((warning) => `<li>${escapeHtml(warning)}</li>`);
++
++  return [
++    '<section class="card">',
++    '<h2>Size</h2>',
++    `<p class="sizeline"><strong>${fmtBytes(size.bytes)}</strong> of ${fmtBytes(size.limit)} <span class="chip ${RISK_CHIP[size.clipRisk]}">${size.clipRisk}</span></p>`,
++    `<div class="meter" role="img" aria-label="${fmtBytes(size.bytes)} of ${fmtBytes(size.limit)}"><span class="fill r-${size.clipRisk}" style="--w:${fill}%"></span><span class="mark" style="--at:${mark}%"></span></div>`,
++    '<p class="note">Gmail clips a message over this size and hides the rest, including the unsubscribe link. The line marks where the warning starts.</p>',
++    warnings.length > 0 ? `<ul class="warns">${warnings.join('')}</ul>` : '',
++    `<ul class="sizes">${largest.join('')}</ul>`,
++    '</section>',
++  ]
++    .filter((chunk) => chunk !== '')
++    .join('\n');
++}
++
++function textSection(result: RenderResult): string {
++  if (result.html === '') return '';
++  const text = toText(result.html);
++  const lines = text === '' ? 0 : text.trimEnd().split('\n').length;
++  return [
++    '<section class="card">',
++    `<details class="plain"><summary><span class="name">Plain-text version</span> <span class="meta">${lines} ${lines === 1 ? 'line' : 'lines'} · click the text to select it all</span></summary>`,
++    text === ''
++      ? '<p class="note">The document has no text.</p>'
++      : `<pre class="src"><code>${escapeHtml(text)}</code></pre>`,
++    '</details>',
++    '</section>',
++  ].join('\n');
++}
+diff --git a/src/inspect/json.ts b/src/inspect/json.ts
+new file mode 100644
+index 0000000..8a5ed34
+--- /dev/null
++++ b/src/inspect/json.ts
+@@ -0,0 +1,83 @@
++import { RenderError } from '@llazyemail/render-template';
++import { byteLength, measureSize } from '../quality/size';
++import { fromError } from '../runtime/result';
++import type { PartFailure, PartStatus, RenderResult } from '../runtime/types';
++
++export interface TraceJsonOptions {
++  /** Include each part's HTML and the final document. Default false, so the file stays small. */
++  html?: boolean;
++}
++
++/** One part in the JSON trace. */
++export interface TraceJsonPart {
++  id: string;
++  status: PartStatus;
++  chars: number;
++  bytes: number;
++  ms: number;
++  error?: PartFailure;
++  html?: string;
++}
++
++/** The shape `traceJson` returns. Stable, so scripts and CI can depend on it. */
++export interface TraceJson {
++  templateId: string;
++  ok: boolean;
++  /** Set when the render threw, and names the part that threw. */
++  threw?: { partId: string; message: string };
++  composeError?: PartFailure;
++  size: {
++    bytes: number;
++    limit: number;
++    clipRisk: 'ok' | 'near' | 'over';
++    warnings: readonly string[];
++  };
++  parts: readonly TraceJsonPart[];
++  html?: string;
++}
++
++/**
++ * A render as plain data: status, size and timing per part, errors, and the
++ * Gmail size check. Accepts a result or a thrown `RenderError`. Pass
++ * `{ html: true }` to include the markup.
++ */
++export function traceJson(
++  input: RenderResult | RenderError,
++  options: TraceJsonOptions = {},
++): TraceJson {
++  const result = input instanceof RenderError ? fromError(input) : input;
++  const size = measureSize(result);
++
++  return {
++    templateId: result.templateId,
++    ok: result.ok,
++    ...(input instanceof RenderError
++      ? { threw: { partId: input.partId, message: input.message } }
++      : {}),
++    ...(result.composeError ? { composeError: result.composeError } : {}),
++    size: {
++      bytes: size.bytes,
++      limit: size.limit,
++      clipRisk: size.clipRisk,
++      warnings: size.warnings,
++    },
++    parts: result.parts.map((part) => ({
++      id: part.id,
++      status: part.status,
++      chars: part.chars,
++      bytes: byteLength(part.html),
++      ms: part.ms,
++      ...(part.error ? { error: part.error } : {}),
++      ...(options.html ? { html: part.html } : {}),
++    })),
++    ...(options.html ? { html: result.html } : {}),
++  };
++}
++
++/** `traceJson` as pretty-printed JSON text with a trailing newline. */
++export function traceJsonText(
++  input: RenderResult | RenderError,
++  options: TraceJsonOptions = {},
++): string {
++  return `${JSON.stringify(traceJson(input, options), null, 2)}\n`;
++}
+diff --git a/src/inspect/scheme.ts b/src/inspect/scheme.ts
+new file mode 100644
+index 0000000..0f34d01
+--- /dev/null
++++ b/src/inspect/scheme.ts
+@@ -0,0 +1,20 @@
++export type Scheme = 'light' | 'dark';
++
++/**
++ * Pin the color scheme of a document for the preview. A frame's own scheme
++ * follows the viewer's system setting, so without this the "Light" preview
++ * turns dark on a dark system. The style goes right after `<head>`, or after
++ * the doctype when there is no head (a doctype must stay first, or the page
++ * drops into quirks mode), or at the start of a fragment.
++ *
++ * This sets the default canvas and text colors, like a client that supports
++ * `color-scheme`. It does not run the document's own `prefers-color-scheme`
++ * rules, which follow the system setting.
++ */
++export function withScheme(html: string, scheme: Scheme): string {
++  const style = `<style>:root{color-scheme:${scheme}}</style>`;
++  const after = /<head\b[^>]*>/i.exec(html) ?? /^\s*<!doctype[^>]*>/i.exec(html);
++  if (!after) return `${style}${html}`;
++  const at = after.index + after[0].length;
++  return `${html.slice(0, at)}${style}${html.slice(at)}`;
++}
+diff --git a/src/inspect/styles.ts b/src/inspect/styles.ts
+index 323d6c8..91a51fb 100644
+--- a/src/inspect/styles.ts
++++ b/src/inspect/styles.ts
+@@ -50,20 +50,38 @@ padding:4px 8px;border-radius:999px;margin-right:4px}
+ font-size:13px;cursor:pointer;color:var(--muted)}
+ .viewport input:checked+label{color:var(--accent);border-color:var(--accent);font-weight:600}
+ .viewport input:focus-visible+label{outline:2px solid var(--accent);outline-offset:2px}
++.viewport label.first{margin-left:14px}
+ .stage{background:var(--bg);border-radius:8px;padding:12px;overflow:auto}
+ .stage iframe{display:block;margin:0 auto;width:100%;height:560px;border:1px solid var(--line);border-radius:6px;background:#fff;color-scheme:light}
++.stage .doc-dark{display:none}
++#sc-dark:checked~.stage .doc-light{display:none}
++#sc-dark:checked~.stage .doc-dark{display:block}
+ #vp-tablet:checked~.stage iframe{width:768px;max-width:100%}
+ #vp-mobile:checked~.stage iframe{width:375px;max-width:100%}
+ .part{border-top:1px solid var(--line);padding:2px 0}
+ .part:first-of-type{border-top:0}
+ .part summary{cursor:pointer;padding:10px 0;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+ .frag{display:block;width:100%;height:220px;resize:vertical;border:1px solid var(--line);border-radius:6px;background:#fff;color-scheme:light;margin:8px 0}
++.src{user-select:all;cursor:copy}
+ .src,.diff{margin:8px 0 12px;padding:12px;background:var(--bg);border-radius:8px;overflow:auto;max-height:360px;font:12.5px/1.5 var(--mono)}
+ .src code,.diff code{font:inherit}
+ .diff span{display:block;white-space:pre}
+ .d-add{background:var(--add)}
+ .d-del{background:var(--del)}
+ .changes{list-style:none;margin:0 0 4px;padding:0;display:grid;gap:6px}
++.pn{display:flex;justify-content:space-between;gap:12px;padding:4px 0 10px;font-size:13px}
++.pn a{color:var(--accent);text-decoration:none}
++.pn a:first-child:last-child{margin-left:auto}
++.part:target{outline:2px solid var(--accent);outline-offset:4px;border-radius:6px}
++.plain summary{cursor:pointer;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
++.sizeline{margin:0 0 10px}
++.meter{position:relative;height:14px;background:var(--bg);border-radius:999px;overflow:hidden}
++.fill{display:block;height:100%;width:var(--w,0%);border-radius:999px;background:var(--ok)}
++.fill.r-near{background:var(--warn)}
++.fill.r-over{background:var(--bad)}
++.mark{position:absolute;top:0;bottom:0;left:var(--at,80%);width:2px;background:var(--ink);opacity:.45}
++.warns{margin:8px 0;padding:10px 14px 10px 30px;background:var(--warnbg);color:var(--warn);border-radius:8px}
++.sizes{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:4px}
+ .note{margin:8px 0 12px;color:var(--muted)}
+ .foot{margin:8px 0 0;text-align:center;color:var(--muted);font-size:12px}
+ @media (max-width:620px){.row{grid-template-columns:1fr;gap:4px}.stat{text-align:left}}
+diff --git a/src/quality/index.ts b/src/quality/index.ts
+new file mode 100644
+index 0000000..aff6791
+--- /dev/null
++++ b/src/quality/index.ts
+@@ -0,0 +1,4 @@
++export { byteLength, measureSize, CLIP_BYTES, NEAR_BYTES } from './size';
++export type { ClipRisk, PartSize, SizeOptions, SizeReport } from './size';
++export { toText } from './text';
++export type { TextOptions } from './text';
+diff --git a/src/quality/size.ts b/src/quality/size.ts
+new file mode 100644
+index 0000000..b2c8d38
+--- /dev/null
++++ b/src/quality/size.ts
+@@ -0,0 +1,97 @@
++import type { RenderResult } from '../runtime/types';
++
++/** Gmail clips a message whose HTML is larger than this and hides the rest behind "View entire message". */
++export const CLIP_BYTES = 102 * 1024;
++/** Where the report starts to warn, so there is room to grow before the clip. */
++export const NEAR_BYTES = 80 * 1024;
++
++export type ClipRisk = 'ok' | 'near' | 'over';
++
++export interface PartSize {
++  id: string;
++  bytes: number;
++}
++
++export interface SizeOptions {
++  /** Bytes at which a client clips. Default `CLIP_BYTES`. */
++  limit?: number;
++  /** Bytes at which the report warns. Default `NEAR_BYTES`, never above `limit`. */
++  nearLimit?: number;
++}
++
++export interface SizeReport {
++  /** UTF-8 size of the final document. */
++  bytes: number;
++  limit: number;
++  nearLimit: number;
++  clipRisk: ClipRisk;
++  /** Parts that produced output, largest first. */
++  perPart: readonly PartSize[];
++  /** Parts that start after the clip point, so a client hides them. */
++  clippedParts: readonly string[];
++  /** True when the unsubscribe link sits after the clip point. */
++  unsubscribeClipped: boolean;
++  warnings: readonly string[];
++}
++
++/** UTF-8 length of a string. Counts code points, so no `TextEncoder` or `Buffer` is needed. */
++export function byteLength(text: string): number {
++  let bytes = 0;
++  for (const char of text) {
++    const code = char.codePointAt(0) as number;
++    bytes += code < 0x80 ? 1 : code < 0x800 ? 2 : code < 0x10000 ? 3 : 4;
++  }
++  return bytes;
++}
++
++function kb(bytes: number): string {
++  return `${(bytes / 1024).toFixed(1)} KB`;
++}
++
++/**
++ * Measure a render against the size at which Gmail clips. Size is the UTF-8
++ * byte length, not `.length`, because that is what the client counts. When the
++ * document is over the limit, the report also names the parts that start after
++ * the clip point, since those are the ones readers never see.
++ */
++export function measureSize(result: RenderResult, options: SizeOptions = {}): SizeReport {
++  const limit = options.limit ?? CLIP_BYTES;
++  const nearLimit = Math.min(options.nearLimit ?? NEAR_BYTES, limit);
++  const bytes = byteLength(result.html);
++  const clipRisk: ClipRisk = bytes > limit ? 'over' : bytes > nearLimit ? 'near' : 'ok';
++
++  const perPart = result.parts
++    .filter((part) => part.html !== '')
++    .map((part) => ({ id: part.id, bytes: byteLength(part.html) }))
++    .sort((a, b) => b.bytes - a.bytes);
++
++  const clippedParts: string[] = [];
++  const warnings: string[] = [];
++
++  if (clipRisk === 'over') {
++    for (const part of result.parts) {
++      const at = part.html === '' ? -1 : result.html.indexOf(part.html);
++      if (at !== -1 && byteLength(result.html.slice(0, at)) >= limit) clippedParts.push(part.id);
++    }
++    warnings.push(
++      `The document is ${kb(bytes)}, over the ${kb(limit)} where Gmail clips it. Readers see "View entire message" instead of the end.`,
++    );
++    if (clippedParts.length > 0) {
++      warnings.push(`Hidden by the clip: ${clippedParts.join(', ')}.`);
++    }
++  } else if (clipRisk === 'near') {
++    warnings.push(
++      `The document is ${kb(bytes)}, close to the ${kb(limit)} where Gmail clips it. ${kb(limit - bytes)} left.`,
++    );
++  }
++
++  const link = result.html.search(/unsubscribe/i);
++  const unsubscribeClipped = link !== -1 && byteLength(result.html.slice(0, link)) >= limit;
++  if (unsubscribeClipped) {
++    warnings.push(
++      'The unsubscribe link is after the clip point. Gmail hides it, which hurts deliverability and breaks bulk-sender rules.',
++    );
++  }
++
++  return { bytes, limit, nearLimit, clipRisk, perPart, clippedParts, unsubscribeClipped, warnings };
++}
+diff --git a/src/quality/text.ts b/src/quality/text.ts
+new file mode 100644
+index 0000000..efa62c3
+--- /dev/null
++++ b/src/quality/text.ts
+@@ -0,0 +1,115 @@
++export interface TextOptions {
++  /** Wrap lines at this many columns. Default 78. Use 0 to leave lines unwrapped. */
++  width?: number;
++}
++
++const ENTITIES: Readonly<Record<string, string>> = {
++  amp: '&',
++  lt: '<',
++  gt: '>',
++  quot: '"',
++  apos: "'",
++  nbsp: ' ',
++  copy: '©',
++  reg: '®',
++  hellip: '…',
++  mdash: '—',
++  ndash: '–',
++  bull: '•',
++  lsquo: '‘',
++  rsquo: '’',
++  ldquo: '“',
++  rdquo: '”',
++};
++
++function decodeEntities(text: string): string {
++  return text.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (match, body: string) => {
++    if (body.startsWith('#')) {
++      const code = /^#x/i.test(body) ? parseInt(body.slice(2), 16) : parseInt(body.slice(1), 10);
++      return code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : match;
++    }
++    return ENTITIES[body.toLowerCase()] ?? match;
++  });
++}
++
++function stripTags(html: string): string {
++  return html.replace(/<[^>]*>/g, '');
++}
++
++function attribute(tag: string, name: string): string | undefined {
++  const found = new RegExp(`\\s${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))`, 'i').exec(tag);
++  return found ? (found[1] ?? found[2] ?? found[3]) : undefined;
++}
++
++function wrapLine(line: string, width: number): string[] {
++  if (width <= 0 || line.length <= width) return [line];
++  const indent = line.startsWith('- ') ? '  ' : '';
++  const lines: string[] = [];
++  let current = '';
++  for (const word of line.split(' ')) {
++    if (current !== '' && current.length + 1 + word.length > width) {
++      lines.push(current);
++      current = indent + word;
++    } else {
++      current = current === '' ? word : `${current} ${word}`;
++    }
++  }
++  lines.push(current);
++  return lines;
++}
++
++/**
++ * Turn an email's HTML into the plain-text alternative that goes in the
++ * `text/plain` part. No DOM and no dependency: it reads the markup this
++ * package generates (headings, paragraphs, lists, links, tables), not
++ * arbitrary HTML.
++ *
++ * Headings become uppercase lines. Paragraphs are separated by a blank line.
++ * Lists become `- item`. A link becomes `label (url)`, or just the URL when the
++ * label is the URL. Images become `[alt]`. The hidden preheader is kept as the
++ * first line. `<head>`, styles, scripts, comments and other `display:none`
++ * blocks are dropped.
++ */
++export function toText(html: string, options: TextOptions = {}): string {
++  const width = options.width ?? 78;
++
++  const preheader =
++    /<span[^>]*class\s*=\s*["'][^"']*\bpreheader\b[^"']*["'][^>]*>([\s\S]*?)<\/span>/i.exec(html);
++  const first = preheader?.[1] === undefined ? '' : decodeEntities(stripTags(preheader[1]));
++
++  let body = html
++    .replace(/<!--[\s\S]*?-->/g, '')
++    .replace(/<(head|style|script)\b[\s\S]*?<\/\1>/gi, '')
++    .replace(/<(div|span|p|td|table|tr)\b[^>]*display\s*:\s*none[^>]*>[\s\S]*?<\/\1>/gi, '');
++
++  body = body
++    .replace(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi, (_match, attrs: string, inner: string) => {
++      const label = decodeEntities(stripTags(inner)).trim();
++      const href = (attribute(` ${attrs}`, 'href') ?? '').trim();
++      if (href === '' || href.startsWith('#') || /^javascript:/i.test(href)) return label;
++      return label === '' || label === href ? href : `${label} (${href})`;
++    })
++    .replace(/<img\b[^>]*>/gi, (tag) => {
++      const alt = attribute(tag, 'alt')?.trim();
++      return alt ? `[${alt}]` : '';
++    })
++    .replace(/<h[1-6]\b[^>]*>([\s\S]*?)<\/h[1-6]>/gi, (_match, inner: string) => {
++      return `\n\n${stripTags(inner).replace(/\s+/g, ' ').trim().toUpperCase()}\n\n`;
++    })
++    .replace(/<li\b[^>]*>/gi, '\n- ')
++    .replace(/<br\s*\/?>/gi, '\n')
++    .replace(/<\/(p|div|tr|table|main|footer|header|section|article|ul|ol|blockquote)>/gi, '\n\n');
++
++  const lines = decodeEntities(stripTags(body))
++    .split('\n')
++    .map((line) => line.replace(/[ \t ]+/g, ' ').trim());
++
++  const lead = first.replace(/\s+/g, ' ').trim();
++  const text = [...(lead === '' ? [] : [lead, '']), ...lines]
++    .flatMap((line) => wrapLine(line, width))
++    .join('\n')
++    .replace(/\n{3,}/g, '\n\n')
++    .trim();
++
++  return text === '' ? '' : `${text}\n`;
++}
+diff --git a/test/polish.test.ts b/test/polish.test.ts
+new file mode 100644
+index 0000000..15c7c71
+--- /dev/null
++++ b/test/polish.test.ts
+@@ -0,0 +1,322 @@
++import { mkdtemp } from 'node:fs/promises';
++import { tmpdir } from 'node:os';
++import { join } from 'node:path';
++import { afterEach, describe, expect, it } from 'vitest';
++import { RenderError, inspect, traceJson, traceJsonText } from '../src/index';
++import type { PartStatus, PartTrace, RenderResult } from '../src/index';
++import { parseArgs } from '../src/cli/args';
++import { crashJsonText, inspectCommand } from '../src/cli/commands';
++import { crash } from '../src/cli/outcome';
++import type { Outcome } from '../src/cli/outcome';
++import { startServer } from '../src/cli/server';
++import { withScheme } from '../src/inspect/scheme';
++import type { DevServer } from '../src/cli/server';
++
++function part(id: string, html: string, status: PartStatus = 'ok', extra: Partial<PartTrace> = {}) {
++  return { id, status, html, chars: html.length, ms: 1, ...extra } satisfies PartTrace;
++}
++
++function result(
++  parts: PartTrace[],
++  html?: string,
++  extra: Partial<RenderResult> = {},
++): RenderResult {
++  return {
++    templateId: 'demo',
++    ok: parts.every((p) => p.status !== 'error'),
++    html: html ?? parts.map((p) => p.html).join('\n'),
++    parts,
++    ...extra,
++  };
++}
++
++describe('inspect: size section', () => {
++  it('shows bytes, the limit, a meter, the largest parts and no warning for a small document', () => {
++    const html = inspect(result([part('small', 'x'.repeat(10)), part('big', 'x'.repeat(2048))]));
++    expect(html).toContain('<h2>Size</h2>');
++    expect(html).toContain('<strong>2.0 KB</strong> of 102.0 KB');
++    expect(html).toContain('class="chip s-ok">ok</span>');
++    expect(html).toContain('class="fill r-ok" style="--w:2.0%"');
++    const half = inspect(result([part('p', 'x'.repeat(51_200))]));
++    expect(half).toContain('class="fill r-ok" style="--w:49.0%"');
++    expect(html).toContain('class="mark" style="--at:78.4%"');
++    expect(html).toContain('<span class="name">big</span> <span class="meta">2.0 KB</span>');
++    expect(html).toContain('<span class="name">small</span> <span class="meta">10 B</span>');
++    expect(html).not.toContain('class="warns"');
++  });
++
++  it('warns near the limit and when over, and fills the meter', () => {
++    const near = inspect(result([part('p', 'x'.repeat(90_000))]));
++    expect(near).toContain('class="chip s-empty">near</span>');
++    expect(near).toContain('class="fill r-near"');
++    expect(near).toContain('class="warns"');
++    expect(near).toContain('close to the');
++
++    const over = inspect(result([part('top', 'x'.repeat(110_000)), part('footer', 'Unsubscribe')]));
++    expect(over).toContain('class="chip s-error">over</span>');
++    expect(over).toContain('class="fill r-over" style="--w:100.0%"');
++    expect(over).toContain('Hidden by the clip: footer.');
++    expect(over).toContain('unsubscribe link is after the clip point');
++  });
++
++  it('lists at most five parts', () => {
++    const parts = Array.from({ length: 7 }, (_, i) => part(`p${i}`, 'x'.repeat(i + 1)));
++    const html = inspect(result(parts));
++    const sizes = html.match(/<ul class="sizes">[\s\S]*?<\/ul>/)?.[0] ?? '';
++    expect(sizes.match(/<li>/g)).toHaveLength(5);
++  });
++
++  it('is left out when there is no document', () => {
++    const html = inspect(result([], ''));
++    expect(html).not.toContain('<h2>Size</h2>');
++    expect(html).not.toContain('Plain-text version');
++  });
++});
++
++describe('inspect: plain text section', () => {
++  it('shows the plain-text version, escaped, with a line count', () => {
++    const html = inspect(result([part('a', '<h1>Hi</h1><p>1 &lt; 2</p>')]));
++    expect(html).toContain('Plain-text version');
++    expect(html).toContain('<span class="meta">3 lines · click the text to select it all</span>');
++    expect(html).toContain('<pre class="src"><code>HI\n\n1 &lt; 2\n</code></pre>');
++  });
++
++  it('uses the singular for one line', () => {
++    expect(inspect(result([part('a', '<p>Only</p>')]))).toContain('1 line · click');
++  });
++
++  it('says so when the document has no text', () => {
++    const html = inspect(result([part('a', '<div></div>')]));
++    expect(html).toContain('0 lines · click');
++    expect(html).toContain('The document has no text.');
++  });
++});
++
++describe('inspect: preview and navigation', () => {
++  it('offers Light and Dark next to the width choices, each with its own pinned frame', () => {
++    const html = inspect(result([part('a', '<html><head></head><p>A</p></html>')]));
++    expect(html).toContain('id="sc-light" checked');
++    expect(html).toContain('for="sc-dark">Dark</label>');
++    expect(html).toContain('name="sc"');
++    expect(html).toContain('title="Rendered document" class="doc-light"');
++    expect(html).toContain('title="Rendered document, dark" class="doc-dark"');
++    expect(html).toContain('&lt;head&gt;&lt;style&gt;:root{color-scheme:light}&lt;/style&gt;');
++    expect(html).toContain('&lt;head&gt;&lt;style&gt;:root{color-scheme:dark}&lt;/style&gt;');
++    expect(html).toContain('prefers-color-scheme</code> styles follow your system setting');
++  });
++
++  it('links each part card to its neighbours, and omits links that go nowhere', () => {
++    const three = inspect(result([part('a', 'A'), part('b', 'B'), part('c', 'C')]));
++    const cards = three.split('<details class="part"').slice(1);
++    expect(cards[0]).toContain('<a href="#part-1">next');
++    expect(cards[0]).not.toContain('previous');
++    expect(cards[1]).toContain('<a href="#part-0">&uarr; previous</a><a href="#part-2">next');
++    expect(cards[2]).toContain('<a href="#part-1">&uarr; previous</a>');
++    expect(cards[2]).not.toContain('next &darr;');
++    expect(inspect(result([part('only', 'x')]))).not.toContain('class="pn"');
++  });
++});
++
++describe('traceJson', () => {
++  it('describes parts by status, size, timing and error, without markup by default', () => {
++    const json = traceJson(
++      result([
++        part('ok', '<p>€</p>'),
++        part('bad', '', 'error', { error: { name: 'TypeError', message: 'nope' } }),
++      ]),
++    );
++    expect(json).toMatchObject({
++      templateId: 'demo',
++      ok: false,
++      size: { clipRisk: 'ok', warnings: [] },
++    });
++    expect(json.parts[0]).toEqual({ id: 'ok', status: 'ok', chars: 8, bytes: 10, ms: 1 });
++    expect(json.parts[1]).toMatchObject({ id: 'bad', status: 'error', error: { message: 'nope' } });
++    expect(json.html).toBeUndefined();
++    expect(json.threw).toBeUndefined();
++    expect(json.composeError).toBeUndefined();
++    expect('html' in (json.parts[0] ?? {})).toBe(false);
++  });
++
++  it('includes the markup on request', () => {
++    const json = traceJson(result([part('a', '<p>A</p>')], '<main><p>A</p></main>'), {
++      html: true,
++    });
++    expect(json.html).toBe('<main><p>A</p></main>');
++    expect(json.parts[0]?.html).toBe('<p>A</p>');
++  });
++
++  it('records a compose error', () => {
++    const json = traceJson(
++      result([part('a', 'A')], '', { ok: false, composeError: { name: 'E', message: 'join' } }),
++    );
++    expect(json.composeError).toEqual({ name: 'E', message: 'join' });
++  });
++
++  it('names the part that threw', () => {
++    const error = new RenderError('part "b" failed', {
++      templateId: 'demo',
++      partId: 'b',
++      trace: [part('a', 'A'), part('b', '', 'error', { error: { name: 'E', message: 'x' } })],
++    });
++    const json = traceJson(error);
++    expect(json.threw).toEqual({ partId: 'b', message: 'part "b" failed' });
++    expect(json.ok).toBe(false);
++  });
++
++  it('reports the Gmail size check', () => {
++    const json = traceJson(result([part('a', 'x'.repeat(110_000))]));
++    expect(json.size.clipRisk).toBe('over');
++    expect(json.size.warnings.length).toBeGreaterThan(0);
++  });
++
++  it('prints pretty JSON with a trailing newline that parses back', () => {
++    const text = traceJsonText(result([part('a', 'A')]));
++    expect(text.endsWith('}\n')).toBe(true);
++    expect(JSON.parse(text).templateId).toBe('demo');
++    expect(JSON.parse(traceJsonText(result([part('a', 'A')]), { html: true })).html).toBe('A');
++  });
++});
++
++describe('inspect --json', () => {
++  it('parses --json in both flag styles and leaves it out otherwise', () => {
++    expect(parseArgs(['inspect', 'a.mjs', '--json', 't.json'])).toEqual({
++      kind: 'inspect',
++      file: 'a.mjs',
++      out: 'inspect.html',
++      json: 't.json',
++    });
++    expect(parseArgs(['inspect', 'a.mjs', '--json=t.json'])).toMatchObject({ json: 't.json' });
++    expect('json' in parseArgs(['inspect', 'a.mjs'])).toBe(false);
++    expect(parseArgs(['inspect', 'a.mjs', '--json'])).toMatchObject({ kind: 'error' });
++    expect(parseArgs(['dev', 'a.mjs', '--json', 'x'])).toMatchObject({ kind: 'error' });
++  });
++
++  function run(outcome: Outcome, jsonOut?: string) {
++    const written: Record<string, string> = {};
++    const code = inspectCommand(
++      'mod.mjs',
++      'out.html',
++      {
++        render: async () => outcome,
++        write: async (file, contents) => void (written[file] = contents),
++        log: () => undefined,
++      },
++      jsonOut,
++    );
++    return { code, written };
++  }
++
++  it('writes the trace next to the report for a result and for a throw', async () => {
++    const ok = run({ kind: 'result', result: result([part('a', 'A')]) }, 't.json');
++    expect(await ok.code).toBe(0);
++    expect(JSON.parse(ok.written['t.json'] ?? '').ok).toBe(true);
++
++    const thrown = run(
++      {
++        kind: 'thrown',
++        message: 'failed',
++        templateId: 'demo',
++        partId: 'a',
++        trace: [part('a', '')],
++      },
++      't.json',
++    );
++    expect(await thrown.code).toBe(1);
++    expect(JSON.parse(thrown.written['t.json'] ?? '').threw.partId).toBe('a');
++  });
++
++  it('writes a crash description when there was nothing to render', async () => {
++    const run1 = run(crash('nope', 'stack'), 't.json');
++    expect(await run1.code).toBe(2);
++    expect(JSON.parse(run1.written['t.json'] ?? '')).toEqual({
++      ok: false,
++      crash: { message: 'nope', detail: 'stack' },
++    });
++    expect(JSON.parse(crashJsonText({ kind: 'crash', message: 'm' }))).toEqual({
++      ok: false,
++      crash: { message: 'm' },
++    });
++  });
++
++  it('writes no JSON unless asked', async () => {
++    const plain = run({ kind: 'result', result: result([part('a', 'A')]) });
++    await plain.code;
++    expect(Object.keys(plain.written)).toEqual(['out.html']);
++    const crashed = run(crash('x'));
++    await crashed.code;
++    expect(Object.keys(crashed.written)).toEqual(['out.html']);
++  });
++});
++
++describe('dev server /trace.json', () => {
++  let server: DevServer | undefined;
++  afterEach(async () => {
++    await server?.close();
++    server = undefined;
++  });
++
++  async function start(outcome: Outcome) {
++    const dir = await mkdtemp(join(tmpdir(), 'trd-trace-'));
++    server = await startServer({ file: join(dir, 'm.mjs'), port: 0, render: async () => outcome });
++    return server.url;
++  }
++
++  it('serves the render as JSON', async () => {
++    const url = await start({ kind: 'result', result: result([part('a', 'A')]) });
++    const res = await fetch(`${url}trace.json`);
++    expect(res.status).toBe(200);
++    expect(res.headers.get('content-type')).toContain('application/json');
++    expect(((await res.json()) as { templateId: string }).templateId).toBe('demo');
++  });
++
++  it('serves a thrown render too', async () => {
++    const url = await start({
++      kind: 'thrown',
++      message: 'failed',
++      templateId: 'demo',
++      partId: 'a',
++      trace: [part('a', '')],
++    });
++    const body = (await (await fetch(`${url}trace.json`)).json()) as { threw: { partId: string } };
++    expect(body.threw.partId).toBe('a');
++  });
++
++  it('answers 404 when the module could not be rendered', async () => {
++    const url = await start(crash('nope'));
++    const res = await fetch(`${url}trace.json`);
++    expect(res.status).toBe(404);
++    expect(await res.text()).toContain('No trace');
++  });
++});
++
++describe('withScheme', () => {
++  it('inserts the style right after <head>, keeping attributes on the tag', () => {
++    expect(withScheme('<html><head lang="x"><title>T</title></head></html>', 'dark')).toBe(
++      '<html><head lang="x"><style>:root{color-scheme:dark}</style><title>T</title></head></html>',
++    );
++    expect(withScheme('<HEAD></HEAD>', 'light')).toBe(
++      '<HEAD><style>:root{color-scheme:light}</style></HEAD>',
++    );
++  });
++
++  it('keeps the doctype first when there is no head', () => {
++    expect(withScheme('<!DOCTYPE html><p>x</p>', 'dark')).toBe(
++      '<!DOCTYPE html><style>:root{color-scheme:dark}</style><p>x</p>',
++    );
++    expect(withScheme('  <!doctype html>\n<p>x</p>', 'light')).toBe(
++      '  <!doctype html><style>:root{color-scheme:light}</style>\n<p>x</p>',
++    );
++  });
++
++  it('starts a fragment with the style', () => {
++    expect(withScheme('<p>x</p>', 'dark')).toBe('<style>:root{color-scheme:dark}</style><p>x</p>');
++    expect(withScheme('', 'light')).toBe('<style>:root{color-scheme:light}</style>');
++  });
++
++  it('does not mistake <header> for <head>', () => {
++    expect(withScheme('<header>h</header>', 'dark')).toBe(
++      '<style>:root{color-scheme:dark}</style><header>h</header>',
++    );
++  });
++});
+diff --git a/test/quality.test.ts b/test/quality.test.ts
+new file mode 100644
+index 0000000..91dfe41
+--- /dev/null
++++ b/test/quality.test.ts
+@@ -0,0 +1,288 @@
++import { describe, expect, it } from 'vitest';
++import { defineEmailTemplate, renderEmail } from '../src/index';
++import type { PartTrace, RenderResult } from '../src/index';
++import { CLIP_BYTES, NEAR_BYTES, byteLength, measureSize } from '../src/quality/size';
++import { toText } from '../src/quality/text';
++
++function part(id: string, html: string): PartTrace {
++  return { id, status: 'ok', html, chars: html.length, ms: 0 };
++}
++
++function result(parts: PartTrace[], html?: string): RenderResult {
++  return { templateId: 'demo', ok: true, html: html ?? parts.map((p) => p.html).join(''), parts };
++}
++
++describe('byteLength', () => {
++  it('counts UTF-8 bytes for one, two, three and four byte characters', () => {
++    expect(byteLength('')).toBe(0);
++    expect(byteLength('a')).toBe(1);
++    expect(byteLength('é')).toBe(2);
++    expect(byteLength('€')).toBe(3);
++    expect(byteLength('😀')).toBe(4);
++    expect(byteLength('a€😀')).toBe(8);
++  });
++
++  it('puts every encoding boundary on the right side', () => {
++    expect(byteLength('\u007f')).toBe(1);
++    expect(byteLength('\u0080')).toBe(2);
++    expect(byteLength('Ж')).toBe(2);
++    expect(byteLength('\u07ff')).toBe(2);
++    expect(byteLength('\u0800')).toBe(3);
++    expect(byteLength('\uffff')).toBe(3);
++    expect(byteLength('\u{10000}')).toBe(4);
++    expect(byteLength('\u{10ffff}')).toBe(4);
++  });
++
++  it('is larger than .length for non-ASCII text', () => {
++    expect('€€€'.length).toBe(3);
++    expect(byteLength('€€€')).toBe(9);
++  });
++});
++
++describe('measureSize', () => {
++  it('exposes the Gmail limits', () => {
++    expect(CLIP_BYTES).toBe(104_448);
++    expect(NEAR_BYTES).toBe(81_920);
++  });
++
++  it('reports a small document as ok with parts largest first and no warnings', () => {
++    const report = measureSize(result([part('a', 'xx'), part('b', 'xxxxx'), part('c', '')]));
++    expect(report).toMatchObject({
++      bytes: 7,
++      limit: CLIP_BYTES,
++      nearLimit: NEAR_BYTES,
++      clipRisk: 'ok',
++      clippedParts: [],
++      unsubscribeClipped: false,
++      warnings: [],
++    });
++    expect(report.perPart).toEqual([
++      { id: 'b', bytes: 5 },
++      { id: 'a', bytes: 2 },
++    ]);
++  });
++
++  it('measures bytes, not characters', () => {
++    expect(measureSize(result([part('a', '€€€')])).bytes).toBe(9);
++  });
++
++  it('warns when near the limit and says how much room is left', () => {
++    const report = measureSize(result([part('a', 'x'.repeat(95))]), { limit: 100, nearLimit: 90 });
++    expect(report.clipRisk).toBe('near');
++    expect(report.warnings).toHaveLength(1);
++    expect(report.warnings[0]).toMatch(/close to the .* where Gmail clips it/);
++  });
++
++  it('is ok at exactly the near limit and near at exactly the clip limit', () => {
++    expect(
++      measureSize(result([part('a', 'x'.repeat(90))]), { limit: 100, nearLimit: 90 }).clipRisk,
++    ).toBe('ok');
++    expect(
++      measureSize(result([part('a', 'x'.repeat(100))]), { limit: 100, nearLimit: 90 }).clipRisk,
++    ).toBe('near');
++    expect(
++      measureSize(result([part('a', 'x'.repeat(101))]), { limit: 100, nearLimit: 90 }).clipRisk,
++    ).toBe('over');
++  });
++
++  it('never lets the near limit sit above the limit', () => {
++    const report = measureSize(result([part('a', 'x')]), { limit: 10, nearLimit: 50 });
++    expect(report.nearLimit).toBe(10);
++  });
++
++  it('names the parts that start after the clip point when over', () => {
++    const report = measureSize(
++      result([part('top', 'x'.repeat(100)), part('tail', 'tail!'), part('empty', '')]),
++      { limit: 100 },
++    );
++    expect(report.clipRisk).toBe('over');
++    expect(report.clippedParts).toEqual(['tail']);
++    expect(report.warnings[0]).toMatch(/over the .* where Gmail clips it/);
++    expect(report.warnings[1]).toBe('Hidden by the clip: tail.');
++  });
++
++  it('says nothing is hidden when every part starts before the clip point', () => {
++    const report = measureSize(result([part('only', 'x'.repeat(150))]), { limit: 100 });
++    expect(report.clipRisk).toBe('over');
++    expect(report.clippedParts).toEqual([]);
++    expect(report.warnings).toHaveLength(1);
++  });
++
++  it('ignores a part whose output is not in the final document', () => {
++    const report = measureSize(
++      result([part('ghost', 'zzz'), part('real', 'x'.repeat(150))], 'x'.repeat(150)),
++      {
++        limit: 100,
++      },
++    );
++    expect(report.clippedParts).toEqual([]);
++  });
++
++  it('warns when the unsubscribe link is after the clip point', () => {
++    const html = `${'x'.repeat(100)}<a>Unsubscribe</a>`;
++    const report = measureSize(result([part('footer', html)]), { limit: 100 });
++    expect(report.unsubscribeClipped).toBe(true);
++    expect(report.warnings.at(-1)).toMatch(/unsubscribe link is after the clip point/);
++  });
++
++  it('does not warn when the unsubscribe link is before the clip point or missing', () => {
++    const early = measureSize(result([part('f', `<a>unsubscribe</a>${'x'.repeat(200)}`)]), {
++      limit: 100,
++    });
++    expect(early.unsubscribeClipped).toBe(false);
++    expect(measureSize(result([part('f', 'no link here')])).unsubscribeClipped).toBe(false);
++  });
++
++  it('measures a real render', () => {
++    const letter = defineEmailTemplate({
++      id: 'w',
++      parts: [{ id: 'big', render: () => '<p>'.padEnd(120_000, 'x') }],
++    });
++    const report = measureSize(renderEmail(letter, { unsubscribeUrl: 'https://example.com/u' }));
++    expect(report.clipRisk).toBe('over');
++    expect(report.perPart[0]?.id).toBe('big');
++    expect(report.clippedParts).toEqual(['footer']);
++    expect(report.unsubscribeClipped).toBe(true);
++  });
++});
++
++describe('toText', () => {
++  it('returns an empty string for empty or markup-only input', () => {
++    expect(toText('')).toBe('');
++    expect(toText('<div></div><!-- note -->')).toBe('');
++  });
++
++  it('puts headings in uppercase and separates paragraphs with a blank line', () => {
++    expect(toText('<h1>Weekly  <b>digest</b></h1><p>One</p><p>Two</p>')).toBe(
++      'WEEKLY DIGEST\n\nOne\n\nTwo\n',
++    );
++  });
++
++  it('turns lists into dashes and keeps items on consecutive lines', () => {
++    expect(toText('<ul><li>One</li><li>Two <b>bold</b></li></ul><p>After</p>')).toBe(
++      '- One\n- Two bold\n\nAfter\n',
++    );
++  });
++
++  it('turns <br> into a line break', () => {
++    expect(toText('<p>a<br>b<br/>c</p>')).toBe('a\nb\nc\n');
++  });
++
++  it('prints links as label (url), or once when the label is the url', () => {
++    expect(toText('<a href="https://a.com/x">Site</a>')).toBe('Site (https://a.com/x)\n');
++    expect(toText('<a href="https://a.com">https://a.com</a>')).toBe('https://a.com\n');
++    expect(toText("<a class='b' href='https://a.com/s'>Single</a>")).toBe(
++      'Single (https://a.com/s)\n',
++    );
++    expect(toText('<a href=https://a.com/u>Bare</a>')).toBe('Bare (https://a.com/u)\n');
++  });
++
++  it('prints just the url for an empty label and just the label for a useless href', () => {
++    expect(toText('<a href="https://a.com/e"></a>')).toBe('https://a.com/e\n');
++    expect(toText('<a href="">Empty</a>')).toBe('Empty\n');
++    expect(toText('<a>No href</a>')).toBe('No href\n');
++    expect(toText('<a href="#top">Top</a>')).toBe('Top\n');
++    expect(toText('<a href="JavaScript:void(0)">Js</a>')).toBe('Js\n');
++  });
++
++  it('decodes entities in link labels', () => {
++    expect(toText('<a href="https://a.com">Fish &amp; chips</a>')).toBe(
++      'Fish & chips (https://a.com)\n',
++    );
++  });
++
++  it('prints image alt text and drops images without it', () => {
++    expect(toText('<p><img src="x" alt=" Logo "></p>')).toBe('[Logo]\n');
++    expect(toText('<p>a<img src="x">b<img src="y" alt="">c</p>')).toBe('abc\n');
++  });
++
++  it('decodes named, decimal and hex entities and leaves unknown or invalid ones alone', () => {
++    expect(
++      toText('<p>&amp; &lt; &gt; &quot; &apos; &copy; &MDASH; &#8364; &#x20AC; &#X20ac;</p>'),
++    ).toBe('& < > " \' © — € € €\n');
++    expect(toText('<p>&nbsp;x&nbsp;</p>')).toBe('x\n');
++    expect(toText('<p>&unknown; &#0; &#1114112;</p>')).toBe('&unknown; &#0; &#1114112;\n');
++  });
++
++  it('keeps the preheader as the first line, decoded', () => {
++    const html =
++      '<html><head><span class="x preheader y">Three &mdash; things</span></head><body><p>Body</p></body></html>';
++    expect(toText(html)).toBe('Three — things\n\nBody\n');
++  });
++
++  it('works when the preheader is empty or absent', () => {
++    expect(toText('<head><span class="preheader"></span></head><p>Body</p>')).toBe('Body\n');
++    expect(toText('<head><title>T</title></head><p>Body</p>')).toBe('Body\n');
++  });
++
++  it('drops head, style, script, comments and display:none blocks', () => {
++    const html =
++      '<head><title>T</title><style>p{color:red}</style></head><script>alert(1)</script><!-- c --><p>Shown</p><div style="display: none">Hidden</div><span style="DISPLAY:NONE">Gone</span>';
++    expect(toText(html)).toBe('Shown\n');
++  });
++
++  it('wraps long paragraphs at the width and leaves short lines alone', () => {
++    const text = toText('<p>one two three four five six</p>', { width: 12 });
++    expect(text).toBe('one two\nthree four\nfive six\n');
++    expect(toText('<p>short</p>', { width: 12 })).toBe('short\n');
++  });
++
++  it('indents the continuation lines of a wrapped list item', () => {
++    expect(toText('<ul><li>one two three four five</li></ul>', { width: 14 })).toBe(
++      '- one two\n  three four\n  five\n',
++    );
++  });
++
++  it('does not break a word longer than the width', () => {
++    expect(toText('<p>https://example.com/a/very/long/path ok</p>', { width: 10 })).toBe(
++      'https://example.com/a/very/long/path\nok\n',
++    );
++  });
++
++  it('leaves lines unwrapped when the width is 0 and wraps at 78 by default', () => {
++    const long = Array.from({ length: 40 }, () => 'word').join(' ');
++    expect(toText(`<p>${long}</p>`, { width: 0 })).toBe(`${long}\n`);
++    const wrapped = toText(`<p>${long}</p>`);
++    expect(wrapped.split('\n').every((line) => line.length <= 78)).toBe(true);
++    expect(wrapped.split('\n').length).toBeGreaterThan(2);
++  });
++
++  it('collapses runs of blank lines and whitespace', () => {
++    expect(toText('<p>a   \t b</p>\n\n\n\n<p>c</p>')).toBe('a b\n\nc\n');
++  });
++
++  it('turns the email shell into readable text', () => {
++    const rendered = renderEmail(
++      { id: 'w', parts: [{ id: 'list', render: () => '<ul><li>Shipped</li><li>Fixed</li></ul>' }] },
++      {
++        title: 'T',
++        preview: 'Preview line',
++        heading: 'Weekly digest',
++        bodyText: 'Hello <a href="https://example.com/x">our site</a>.',
++        ctaLabel: 'Read more',
++        ctaUrl: 'https://example.com/read',
++        companyName: 'LLazyEmail',
++        unsubscribeUrl: 'https://example.com/unsub',
++      },
++    );
++    expect(toText(rendered.html)).toBe(
++      [
++        'Preview line',
++        '',
++        'WEEKLY DIGEST',
++        '',
++        'Hello our site (https://example.com/x).',
++        '',
++        'Read more (https://example.com/read)',
++        '',
++        '- Shipped',
++        '- Fixed',
++        '',
++        'LLazyEmail',
++        '',
++        'Unsubscribe (https://example.com/unsub)',
++        '',
++      ].join('\n'),
++    );
++  });
++});
+diff --git a/tsup.config.ts b/tsup.config.ts
+index 46405ea..1ba7f46 100644
+--- a/tsup.config.ts
++++ b/tsup.config.ts
+@@ -33,6 +33,7 @@ export default defineConfig([
+       body: 'src/templates/body/body.ts',
+       main: 'src/templates/main/main.ts',
+       document: 'src/templates/document/index.ts',
++      quality: 'src/quality/index.ts',
+     },
+     format: ['esm', 'cjs'],
+     clean: false,
+diff --git a/vitest.config.ts b/vitest.config.ts
+index a2d470e..957d637 100644
+--- a/vitest.config.ts
++++ b/vitest.config.ts
+@@ -14,6 +14,7 @@ export default defineConfig({
+         'src/runtime/types.ts',
+         'src/templates/email/types.ts',
+         'src/templates/document/index.ts',
++        'src/quality/index.ts',
+         // Process entry points. scripts/smoke.mjs runs them from the build.
+         'src/cli/main.ts',
+         'src/cli/worker.ts',
+-- 
+2.43.0
+
