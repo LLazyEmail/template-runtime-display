@@ -24,14 +24,17 @@ export default tseslint.config(
     },
   },
   {
-    files: ['scripts/**/*.mjs'],
+    files: ['scripts/**/*.mjs', 'test/fixtures/**/*.mjs'],
     languageOptions: {
       globals: {
         URL: 'readonly',
         console: 'readonly',
         process: 'readonly',
+        setInterval: 'readonly',
+        setTimeout: 'readonly',
       },
     },
   },
   prettier,
 );
+
