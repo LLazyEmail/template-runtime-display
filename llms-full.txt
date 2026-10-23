@@ -183,6 +183,27 @@ When `unsubscribeUrl` is set, the link text is `Unsubscribe`.
 
 `content` is raw HTML placed in the div. Callers insert the result where they want it. `document` does not call `content` or `main` itself.
 
+## inspect(input, options?): string
+
+`input` is a `RenderResult` or a thrown `RenderError` (its trace becomes the part list). `options`: `{ title?: string; compareTo?: RenderResult | RenderError }`.
+
+Returns one HTML5 page, deterministic for the same trace. It contains: a verdict (`OK` or `FAILED`), a banner that names each broken part (or the compose error, or the throw), output size and time per part, the finished document in a sandboxed frame at Full, Tablet 768 and Mobile 375, and one card per part with a sandboxed preview and its escaped source. Broken parts open by default. With `compareTo`, a section lists changed parts and the changed lines.
+
+Safety: no `<script>`, no `<link>`, no network requests. Every id, message, title and HTML string is escaped. Part and document HTML go only into `<iframe sandbox="">` `srcdoc` and escaped `<pre>` blocks.
+
+## diffRenders(before, after): RenderDiff and formatDiff(diff): string
+
+Compares two `RenderResult`s. Parts match by id, so reordering alone is not a change. `RenderDiff` is `{ templateBefore, templateAfter, changed, parts: PartDiff[], lines: DiffLine[] }`. `PartDiff` is `{ id, change: 'added' | 'removed' | 'changed' | 'unchanged', statusBefore?, statusAfter?, charsDelta, lines }`. `DiffLine` is `{ kind: 'same' | 'add' | 'del', text }`. `changed` is true when the document or any part (HTML or status) differs. Very large diffs fall back to replacing the changed block. `formatDiff` prints changed parts, then changed lines with two lines of context.
+
+## CLI: template-runtime-display
+
+`bin` in `package.json`. Node-only, not part of the library entry point, and the library keeps no dependency on it.
+
+- `dev <module> [--port 4177] [--host 127.0.0.1] [--watch <dir>]...` serves the inspector at `/`, the bare document at `/email`, and reloads open pages when a file under the module's directory (or a `--watch` directory) changes. Each render runs in a fresh child process with a 10 second limit. Non-loopback `Host` headers get 403 when bound to loopback.
+- `inspect <module> [--out inspect.html]` renders once, prints `explain`, writes the report. Exit `0` ok, `1` a part broke or a throw, `2` the module could not be rendered.
+
+The module exports `template` (`EmailTemplate` input or `Template<EmailProps>`), and optionally `props` and `options` (`RenderOptions`). A default export with those keys also works. The CLI uses `onError: 'collect'` unless `options.onError` says otherwise.
+
 ## Sources
 
 - https://github.com/LLazyEmail/template-runtime-display/blob/main/src/index.ts

@@ -22,6 +22,11 @@ export type { RenderJob, RenderOptions } from '@llazyemail/render-template';
 export { RenderError } from '@llazyemail/render-template';
 export { explain } from './runtime/explain';
 
+export { inspect } from './inspect/inspect';
+export type { InspectOptions } from './inspect/inspect';
+export { diffRenders, formatDiff } from './inspect/diff';
+export type { DiffLine, PartChange, PartDiff, RenderDiff } from './inspect/diff';
+
 export { defineEmailTemplate, renderEmail } from './templates/email/email';
 export type { EmailProps, EmailTemplate } from './templates/email/email';
 

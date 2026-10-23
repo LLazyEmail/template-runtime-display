@@ -23,13 +23,14 @@ npm run lint           # eslint
 npm run lint:fix
 npm run format         # prettier --write
 npm run format:check
+npm run demo           # build, then serve examples/inspect-demo.mjs in the live inspector
 npm run generate       # build, render a letter, print explain(), write generated/letter.html
 npm run publint        # export and types check; requires dist/
 npm run smoke          # load the ESM, CJS, and IIFE builds; requires dist/
 npm run check          # format, lint, typecheck, build, test, smoke, publint
 ```
 
-Node.js **24+**. Run `npm run check` before handing work back. Run `npm run test:coverage` when you add or change an executable `src/` file. `src/index.ts`, `src/runtime/types.ts`, `src/templates/email/types.ts`, and `src/templates/document/index.ts` are excluded: v8 reports 0% on files with no runtime code.
+Node.js **24+**. Run `npm run check` before handing work back. Run `npm run test:coverage` when you add or change an executable `src/` file. `src/index.ts`, `src/runtime/types.ts`, `src/templates/email/types.ts`, `src/templates/document/index.ts`, `src/cli/main.ts`, and `src/cli/worker.ts` are excluded. The first four have no runtime code, so v8 reports 0%. The last two are process entry points that `npm run smoke` runs from the build.
 
 ESLint and Prettier both run in CI. Tests are Vitest, not Jest. `markup-generator` is a devDependency used to write rendered HTML in `test/write.test.ts` and `npm run generate`. It is not a runtime dependency.
 
@@ -53,10 +54,24 @@ src/templates/content/content.ts  content()
 src/templates/document/document.ts document()
 src/utils/escape.ts               escapeHtml()
 src/utils/pickDefined.ts          drop omitted string fields
+src/runtime/result.ts             fromError(): a thrown RenderError as a failed result
+src/inspect/inspect.ts            inspect(): self-contained HTML report
+src/inspect/diff.ts               diffRenders, formatDiff, line diff
+src/inspect/styles.ts             inspector stylesheet
+src/cli/args.ts                   parseArgs (pure)
+src/cli/outcome.ts                runModule: load a user module and render it
+src/cli/fork.ts                   forkRender: render in a child process with a timeout
+src/cli/pages.ts                  outcome to page, crash page
+src/cli/server.ts                 startServer: dev server, SSE reload, file watching
+src/cli/commands.ts               inspectCommand and its exit codes
+src/cli/main.ts, worker.ts        process entry points (CLI bin and the render child)
 test/runtime.test.ts    runtime spec
 test/email.test.ts      email preset spec
 test/index.test.ts      fragment spec
 examples/compose.ts    sample letter; sampleHtml is covered by the suite
+test/inspect.test.ts    inspector page spec
+test/diff.test.ts       diff spec
+test/cli.test.ts        CLI, child process and dev server spec (fixtures in test/fixtures)
 test/write.test.ts      writes a rendered letter through markup-generator and reads it back
 scripts/generate.mjs   prints explain() and writes generated/letter.html
 .github/workflows/ci.yml
@@ -67,7 +82,7 @@ tsup.config.ts         ESM + CJS + IIFE, dts, sourcemaps
 vitest.config.ts
 ```
 
-Do not add a second entry point. Do not add `src/**/*.js` next to a `.ts` file. Do not add a template registry.
+The library has one entry point, `src/index.ts`. The CLI is a `bin`, built from `src/cli/main.ts` and `src/cli/worker.ts`; nothing in the library imports `src/cli/`. Keep Node built-ins (`node:http`, `node:child_process`, `node:fs`) inside `src/cli/`, so the ESM, CJS and script-tag builds stay platform neutral. Do not add another library entry point. Do not add `src/**/*.js` next to a `.ts` file. Do not add a template registry.
 
 ## Runtime model
 
@@ -88,6 +103,14 @@ Custom code is a part, or a slot that a part reads with `slot(ctx, id)`. A missi
 `defineEmailTemplate` and `renderEmail` are a preset over the same runtime. Part order is `head`, `main`, the caller's parts, then `footer`. Compose places custom HTML inside `<body>` after `main` and before `footer`, joined with newlines. With no custom parts, the HTML equals `document({ headHtml: head(...), mainHtml: main(...), footerHtml: footer(...) })`. A slot named `head`, `main`, or `footer` replaces that built-in fragment. Omitted email props follow the fragment omission rules. `content()` is not in the shell. A custom part may call it.
 
 Traces and defined templates are frozen so a later template cannot change an earlier debug snapshot.
+
+## Inspector and CLI
+
+`inspect(result | RenderError, { title?, compareTo? })` returns a page and does no I/O. It has no scripts and no network requests, and it escapes every id, message and title. Part and document HTML go only into `<iframe sandbox="">` `srcdoc` and escaped `<pre>` blocks. Do not add `allow-scripts` to those frames, and do not interpolate part HTML anywhere else. The only script ever served is the reload listener the dev server adds to `/`, placed before the last `</body>`.
+
+`diffRenders` matches parts by id. `changed` is true when the document or a part's HTML or status differs.
+
+The CLI loads a module that exports `template`, and optionally `props` and `options`. Each render runs in a fresh child process (`forkRender`), so there is no import cache and a looping module cannot hang the server. The default error mode there is `collect`. `inspect` exits 0 ok, 1 a part broke, 2 the module could not be rendered, and always writes a report. The dev server binds to `127.0.0.1` and answers 403 to non-loopback `Host` headers.
 
 ## Invariants
 

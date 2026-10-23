@@ -4,7 +4,13 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   {
-    ignores: ['dist/**', 'coverage/**', 'node_modules/**', 'generated/**'],
+    ignores: [
+      'dist/**',
+      'coverage/**',
+      'node_modules/**',
+      'generated/**',
+      'test/fixtures/syntax.mjs',
+    ],
   },
   eslint.configs.recommended,
   tseslint.configs.recommended,

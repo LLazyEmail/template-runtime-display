@@ -42,4 +42,18 @@ export default defineConfig([
       };
     },
   },
+  {
+    ...shared,
+    platform: 'node' as const,
+    entry: {
+      cli: 'src/cli/main.ts',
+      worker: 'src/cli/worker.ts',
+    },
+    format: ['esm'],
+    dts: false,
+    clean: false,
+    // Keep the dependency external so the worker and the library share one RenderError class.
+    external: ['@llazyemail/render-template'],
+    outExtension: () => ({ js: '.js' }),
+  },
 ]);

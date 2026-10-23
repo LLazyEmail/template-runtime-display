@@ -1,6 +1,11 @@
 # @llazyemail/template-runtime-display
 
-Standalone runtime that renders a whole HTML email from named parts, and a per-part trace when custom code breaks. The email shell is a preset. Any other document is a `Template` you define yourself.
+Render a whole HTML email from named parts, then **see exactly which part broke**. A live inspector shows every part's output, timing and error, previews the document at three widths, and diffs each edit against the last render. The email shell is a preset. Any other document is a `Template` you define yourself.
+
+```bash
+npx template-runtime-display dev ./letter.mjs     # live inspector, reloads on save
+npx template-runtime-display inspect ./letter.mjs # one-shot HTML report, exit 1 if a part broke
+```
 
 [![CI](https://github.com/LLazyEmail/template-runtime-display/actions/workflows/ci.yml/badge.svg)](https://github.com/LLazyEmail/template-runtime-display/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -11,6 +16,64 @@ Requires **Node.js 24+**. No runtime dependencies. No template registry. Strings
 - Short index: [llms.txt](./llms.txt)
 - Full API: [llms-full.txt](./llms-full.txt)
 - Sample: [examples/compose.ts](./examples/compose.ts)
+- Inspector demo: [examples/inspect-demo.mjs](./examples/inspect-demo.mjs)
+
+## Inspector
+
+The inspector turns a render into one self-contained HTML page: a verdict, a banner naming each broken part, output size and timing per part, every part's HTML next to a sandboxed preview, and the finished document at Full, Tablet 768 and Mobile 375. The page has no scripts and makes no network requests. Part HTML only appears inside `sandbox=""` frames and escaped blocks, so a hostile part cannot run code in the report.
+
+### Live: `dev`
+
+```bash
+npm run demo    # builds, then serves examples/inspect-demo.mjs, which has a broken part on purpose
+```
+
+Write a module that exports `template` (an email template input or a `Template`) and, optionally, `props` and `options`:
+
+```js
+// letter.mjs
+import { defineEmailTemplate } from '@llazyemail/template-runtime-display';
+
+export const template = defineEmailTemplate({
+  id: 'weekly',
+  parts: [{ id: 'promo', render: (ctx) => `<p>${ctx.props.code.toUpperCase()}</p>` }],
+});
+export const props = { title: 'Weekly', code: 'save10' };
+```
+
+```bash
+npx template-runtime-display dev ./letter.mjs --port 4177
+```
+
+- Save the module, or anything under its directory (add more with `--watch <dir>`), and the page reloads.
+- After an edit that changes the output, the page lists which parts changed and shows the changed lines.
+- `/email` serves the finished document alone.
+- Each render runs in a fresh child process, so edits are always picked up. A module that crashes or loops forever shows an error page instead of stopping the server (10 second limit).
+- It binds to `127.0.0.1` and rejects requests whose `Host` header is not loopback.
+- Default error mode in the CLI is `collect`, so one broken part does not hide the rest. Set `options.onError` in the module to change that.
+- Node 24 can load a `.ts` module that uses only erasable syntax and explicit `.ts` import paths.
+
+### One-shot: `inspect`
+
+```bash
+npx template-runtime-display inspect ./letter.mjs --out report.html
+```
+
+Prints the same trace as `explain`, writes the report, and exits `0` when every part rendered, `1` when a part broke, `2` when the module could not be rendered at all. A report is written in every case, so CI can attach it as an artifact.
+
+### From code
+
+```ts
+import { diffRenders, formatDiff, inspect } from '@llazyemail/template-runtime-display';
+
+const before = renderEmail(template, props, { onError: 'collect' });
+const after = renderEmail(template, { ...props, code: 'save20' }, { onError: 'collect' });
+
+writeFileSync('report.html', inspect(after, { compareTo: before }));
+console.log(formatDiff(diffRenders(before, after)));
+```
+
+`inspect(resultOrRenderError, { title?, compareTo? })` returns the page as a string. `diffRenders(before, after)` matches parts by id and returns a per-part and whole-document line diff. `formatDiff` prints it for a terminal.
 
 ## Package ecosystem and Lit
 
@@ -128,6 +191,8 @@ npm run typecheck    # tsc --noEmit
 npm run lint
 npm run format       # prettier --write
 npm run format:check
+npm run demo         # build, then serve the inspector on examples/inspect-demo.mjs
+npm run inspect -- <module>  # one-shot report from the built CLI
 npm run generate     # render a letter, print explain(), write generated/letter.html
 npm run publint
 npm run smoke        # load the ESM, CJS, and script-tag builds
@@ -139,3 +204,9 @@ npm run check        # format, lint, typecheck, build, test, smoke, publint
 ## License
 
 MIT
+
+
+## Planned: Email Quality Toolkit
+
+See [docs/email-quality-toolkit.md](./docs/email-quality-toolkit.md) for the proposed lint, plain-text, dark-mode and size checks that will attach as `result.quality` on renders. This is future work; the current release adds the inspector and CLI only.
+
