@@ -40,7 +40,7 @@ const RELOAD_SCRIPT =
   "<script>(function(){var s=new EventSource('/__events');s.onmessage=function(){location.reload()}})()</script>";
 
 /** Put the reload listener just before `</body>`. The inspector escapes part HTML, so the last match is ours. */
-function withReload(html: string): string {
+export function withReload(html: string): string {
   const at = html.lastIndexOf('</body>');
   return at === -1
     ? html + RELOAD_SCRIPT
@@ -85,7 +85,7 @@ export function startServer(options: DevServerOptions): Promise<DevServer> {
       return;
     }
 
-    const path = new URL(req.url ?? '/', 'http://localhost').pathname;
+    const path = requestPath(req.url);
 
     if (path === '/__events') {
       res.writeHead(200, {
@@ -172,10 +172,15 @@ export function startServer(options: DevServerOptions): Promise<DevServer> {
 }
 
 /** True for `localhost`, `127.0.0.1` and `[::1]` with any port. Blocks DNS-rebinding pages from reaching a local server. */
-function isLoopbackHost(header: string | undefined): boolean {
+export function isLoopbackHost(header: string | undefined): boolean {
   if (!header) return false;
   const host = header.startsWith('[')
     ? header.slice(0, header.indexOf(']') + 1)
     : header.split(':')[0];
   return host === 'localhost' || host === '127.0.0.1' || host === '[::1]';
+}
+
+/** Resolve the request path, defaulting a missing or empty url to `/`. */
+export function requestPath(url: string | undefined): string {
+  return new URL(url || '/', 'http://localhost').pathname;
 }

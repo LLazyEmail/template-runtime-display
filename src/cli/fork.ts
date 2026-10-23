@@ -13,6 +13,9 @@ export interface ForkOptions {
 }
 
 const STDERR_LIMIT = 8000;
+export function appendStderr(current: string, chunk: string): string {
+  return current.length < STDERR_LIMIT ? current + chunk : current;
+}
 /** Time to let a queued IPC message arrive when the child's exit is seen first. */
 const EXIT_GRACE_MS = 50;
 
@@ -47,7 +50,7 @@ export function forkRender(file: string, options: ForkOptions): Promise<Outcome>
     );
 
     child.stderr?.on('data', (chunk: Uint8Array) => {
-      if (stderr.length < STDERR_LIMIT) stderr += String(chunk);
+      stderr = appendStderr(stderr, String(chunk));
     });
     child.once('message', (message) => finish(message as Outcome));
     child.once('error', (error) => finish(crash(error.message, stderr)));
