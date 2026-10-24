@@ -103,7 +103,7 @@ describe('lintEmail', () => {
   it('truncates long excerpts and accepts single-quoted and bare hrefs', () => {
     const long = '<div style="display:flex">' + 'x'.repeat(200) + '</div>';
     const findings = lintEmail(result([part('long', long)]));
-    expect(findings[0].excerpt).toContain('…');
+    expect(findings[0]?.excerpt).toContain('…');
     const links = lintEmail(
       result([part('l', "<a href='https://a.com'>x</a><a href=https://b.com>y</a>")]),
     );
