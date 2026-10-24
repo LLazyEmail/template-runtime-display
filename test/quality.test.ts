@@ -290,4 +290,26 @@ describe('toText', () => {
     expect(toText('before <unclosed after')).toContain('before');
     expect(toText('before <unclosed after')).toContain('<unclosed');
   });
+
+  it('drops unclosed head/style/script and hidden blocks without looping', () => {
+    expect(toText('<style>body{color:red}</style><p>ok</p>')).toContain('ok');
+    expect(toText('<script>alert(1)</script><p>ok</p>')).toContain('ok');
+    expect(toText('<head><title>t</title></head><p>ok</p>')).toContain('ok');
+    expect(toText('<div style="display:none">secret</div><p>ok</p>')).toContain('ok');
+    expect(toText('<div style="display:none">secret</div><p>ok</p>')).not.toContain('secret');
+    // unclosed forms should not hang
+    expect(toText('<style>no close')).toContain('no close');
+    expect(toText('<div style="display:none">no close')).toContain('no close');
+  });
+
+  it('handles unclosed comments and preheader spans', () => {
+    expect(toText('before <!-- unclosed')).toContain('before');
+    expect(toText('<span class="preheader">hi')).toContain('hi');
+    expect(toText('<span class="preheader"')).toContain('span');
+  });
+
+  it('handles unclosed anchors and headings', () => {
+    expect(toText('<a href="https://x.com">label')).toContain('label');
+    expect(toText('<h1>Title')).toContain('Title');
+  });
 });
