@@ -126,7 +126,7 @@ export function toText(html: string, options: TextOptions = {}): string {
 
   const lines = decodeEntities(stripTags(body))
     .split('\n')
-    .map((line) => line.replace(/[ \t ]+/g, ' ').trim());
+    .map((line) => line.replace(/[ \t\u00A0]+/g, ' ').trim());
 
   const lead = first.replace(/\s+/g, ' ').trim();
   const text = [...(lead === '' ? [] : [lead, '']), ...lines]
