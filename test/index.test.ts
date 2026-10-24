@@ -3,6 +3,8 @@ import { sampleHtml } from '../examples/compose';
 import { body } from '../src/templates/body/body';
 import { content } from '../src/templates/content/content';
 import { document } from '../src/templates/document/document';
+import { xhtmlDocument, XHTML_DOCTYPE } from '../src/templates/document/xhtmlDocument';
+import * as root from '../src/index';
 import { footer } from '../src/templates/footer/footer';
 import { head } from '../src/templates/head/head';
 import { main } from '../src/templates/main/main';
@@ -151,5 +153,22 @@ describe('content', () => {
 
   it('inserts the supplied HTML', () => {
     expect(content({ content: '<p>Hello</p>' })).toContain('<p>Hello</p>');
+  });
+});
+
+describe('xhtmlDocument', () => {
+  it('bakes in the XHTML doctype, xmlns and no lang', () => {
+    const html = xhtmlDocument({ headHtml: '<head></head>', mainHtml: '<main></main>' });
+    expect(html.startsWith(`${XHTML_DOCTYPE}\n<html xmlns="http://www.w3.org/1999/xhtml">`)).toBe(
+      true,
+    );
+    expect(html).not.toContain('lang=');
+    expect(html).toContain('<main></main>');
+    expect(html).not.toContain('undefined');
+  });
+
+  it('works with no props and is exported from the root', () => {
+    expect(root.xhtmlDocument()).toBe(xhtmlDocument());
+    expect(root.XHTML_DOCTYPE).toBe(XHTML_DOCTYPE);
   });
 });

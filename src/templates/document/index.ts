@@ -16,3 +16,6 @@ export { openTag, serializeAttributes } from '../../utils/openTag';
 export type { TagAttributes } from '../../utils/openTag';
 
 export { mergeShell } from './mergeShell';
+
+export { xhtmlDocument, XHTML_DOCTYPE } from './xhtmlDocument';
+export type { XhtmlDocumentProps } from './xhtmlDocument';

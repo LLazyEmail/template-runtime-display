@@ -51,6 +51,8 @@ export type { ContentProps } from './templates/content/content';
 
 export { document, mergeShell, openTag, serializeAttributes } from './templates/document';
 export type { DocumentProps, DocumentShellOptions, TagAttributes } from './templates/document';
+export { xhtmlDocument, XHTML_DOCTYPE } from './templates/document';
+export type { XhtmlDocumentProps } from './templates/document';
 
 export { byteLength, measureSize, CLIP_BYTES, NEAR_BYTES } from './quality/size';
 export type { ClipRisk, PartSize, SizeOptions, SizeReport } from './quality/size';
