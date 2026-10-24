@@ -71,6 +71,16 @@
         "types": "./dist/document.d.cts",
         "default": "./dist/document.cjs"
       }
+    },
+    "./quality": {
+      "import": {
+        "types": "./dist/quality.d.ts",
+        "default": "./dist/quality.js"
+      },
+      "require": {
+        "types": "./dist/quality.d.cts",
+        "default": "./dist/quality.cjs"
+      }
     }
   },
   "files": [

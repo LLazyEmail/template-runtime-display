@@ -24,6 +24,8 @@ export { explain } from './runtime/explain';
 
 export { inspect } from './inspect/inspect';
 export type { InspectOptions } from './inspect/inspect';
+export { traceJson, traceJsonText } from './inspect/json';
+export type { TraceJson, TraceJsonOptions, TraceJsonPart } from './inspect/json';
 export { diffRenders, formatDiff } from './inspect/diff';
 export type { DiffLine, PartChange, PartDiff, RenderDiff } from './inspect/diff';
 
@@ -49,3 +51,8 @@ export type { ContentProps } from './templates/content/content';
 
 export { document, mergeShell, openTag, serializeAttributes } from './templates/document';
 export type { DocumentProps, DocumentShellOptions, TagAttributes } from './templates/document';
+
+export { byteLength, measureSize, CLIP_BYTES, NEAR_BYTES } from './quality/size';
+export type { ClipRisk, PartSize, SizeOptions, SizeReport } from './quality/size';
+export { toText } from './quality/text';
+export type { TextOptions } from './quality/text';

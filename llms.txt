@@ -57,3 +57,16 @@ template-runtime-display inspect ./letter.mjs [--out inspect.html]   # exit 0 ok
 ```
 
 The module exports `template`, and optionally `props` and `options`. The CLI defaults `onError` to `collect`.
+
+## Quality checks
+
+```ts
+import { measureSize, toText } from '@llazyemail/template-runtime-display/quality';
+import { traceJson } from '@llazyemail/template-runtime-display';
+
+measureSize(result); // { bytes, clipRisk: 'ok' | 'near' | 'over', perPart, clippedParts, unsubscribeClipped, warnings }
+toText(result.html); // plain-text alternative, wrapped at 78 columns
+traceJson(result); // status, bytes and ms per part, errors, size check
+```
+
+`bytes` is UTF-8, which is what Gmail counts against its ~102 KB clip. `inspect --json trace.json` writes the trace, and the dev server serves it at `/trace.json`. The report shows size, the plain-text version, and a Light / Dark preview. Guide: docs/inspector.md.

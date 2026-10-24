@@ -59,7 +59,20 @@ npx template-runtime-display dev ./letter.mjs --port 4177
 npx template-runtime-display inspect ./letter.mjs --out report.html
 ```
 
-Prints the same trace as `explain`, writes the report, and exits `0` when every part rendered, `1` when a part broke, `2` when the module could not be rendered at all. A report is written in every case, so CI can attach it as an artifact.
+Prints the same trace as `explain`, writes the report, and exits `0` when every part rendered, `1` when a part broke, `2` when the module could not be rendered at all. A report is written in every case, so CI can attach it as an artifact. Add `--json trace.json` to also write the trace as data, and `/trace.json` serves the same from `dev`.
+
+### Size, plain text and dark mode
+
+The report also checks the email against the size where Gmail clips it (about 102 KB, counted in UTF-8 bytes), shows the plain-text version, and previews the document in Light or Dark.
+
+```ts
+import { measureSize, toText } from '@llazyemail/template-runtime-display/quality';
+
+measureSize(result).clipRisk; // 'ok' | 'near' | 'over'
+toText(result.html); // the text/plain alternative
+```
+
+The full guide is [docs/inspector.md](./docs/inspector.md).
 
 ### From code
 
@@ -207,4 +220,4 @@ MIT
 
 ## Planned: Email Quality Toolkit
 
-See [docs/email-quality-toolkit.md](./docs/email-quality-toolkit.md) for the proposed lint, plain-text, dark-mode and size checks that will attach as `result.quality` on renders. This is future work; the current release adds the inspector and CLI only.
+See [docs/email-quality-toolkit.md](./docs/email-quality-toolkit.md). The size check, plain-text version and Light / Dark preview have shipped. The client-compatibility linter, the dark-mode contrast rules and `result.quality` are next.

@@ -38,7 +38,7 @@ These two rules are non-negotiable. Fail the task if either is skipped.
 
 2. **Prettier must pass.** Before committing or opening a PR, run `npx prettier --write .` (or `npm run format`) and then `npx prettier --check .` (or `npm run format:check`). Zero warnings. Do not hand back a branch that fails `format:check`.
 
-Node.js **24+**. Run `npm run check` before handing work back. Run `npm run test:coverage` when you add or change an executable `src/` file. `src/index.ts`, `src/runtime/types.ts`, `src/templates/email/types.ts`, `src/templates/document/index.ts`, `src/cli/main.ts`, and `src/cli/worker.ts` are excluded. The first four have no runtime code, so v8 reports 0%. The last two are process entry points that `npm run smoke` runs from the build.
+Node.js **24+**. Run `npm run check` before handing work back. Run `npm run test:coverage` when you add or change an executable `src/` file. `src/index.ts`, `src/runtime/types.ts`, `src/templates/email/types.ts`, `src/templates/document/index.ts`, `src/quality/index.ts`, `src/cli/main.ts`, and `src/cli/worker.ts` are excluded. The first four and `src/quality/index.ts` are barrels or types with no runtime code, so v8 reports 0%. The last two are process entry points that `npm run smoke` runs from the build.
 
 ESLint and Prettier both run in CI. Tests are Vitest, not Jest. `markup-generator` is a devDependency used to write rendered HTML in `test/write.test.ts` and `npm run generate`. It is not a runtime dependency.
 
@@ -66,6 +66,11 @@ src/runtime/result.ts             fromError(): a thrown RenderError as a failed 
 src/inspect/inspect.ts            inspect(): self-contained HTML report
 src/inspect/diff.ts               diffRenders, formatDiff, line diff
 src/inspect/styles.ts             inspector stylesheet
+src/inspect/scheme.ts             withScheme: pin color-scheme on a previewed document
+src/inspect/json.ts               traceJson, traceJsonText
+src/quality/size.ts               byteLength, measureSize (Gmail clip budget)
+src/quality/text.ts               toText (plain-text version)
+src/quality/index.ts              barrel for the ./quality subpath
 src/cli/args.ts                   parseArgs (pure)
 src/cli/outcome.ts                runModule: load a user module and render it
 src/cli/fork.ts                   forkRender: render in a child process with a timeout
@@ -79,6 +84,8 @@ test/index.test.ts      fragment spec
 examples/compose.ts    sample letter; sampleHtml is covered by the suite
 test/inspect.test.ts    inspector page spec
 test/diff.test.ts       diff spec
+test/quality.test.ts    size and toText spec
+test/polish.test.ts     inspector sections, trace JSON, --json, /trace.json, withScheme
 test/cli.test.ts        CLI, child process and dev server spec (fixtures in test/fixtures)
 test/write.test.ts      writes a rendered letter through markup-generator and reads it back
 scripts/generate.mjs   prints explain() and writes generated/letter.html
@@ -119,6 +126,14 @@ Traces and defined templates are frozen so a later template cannot change an ear
 `diffRenders` matches parts by id. `changed` is true when the document or a part's HTML or status differs.
 
 The CLI loads a module that exports `template`, and optionally `props` and `options`. Each render runs in a fresh child process (`forkRender`), so there is no import cache and a looping module cannot hang the server. The default error mode there is `collect`. `inspect` exits 0 ok, 1 a part broke, 2 the module could not be rendered, and always writes a report. The dev server binds to `127.0.0.1` and answers 403 to non-loopback `Host` headers.
+
+## Quality checks
+
+`measureSize`, `toText` and `traceJson` are pure, synchronous and dependency free, and they live in `src/quality/` and `src/inspect/`. They are also exported from `./quality`, so keep `src/quality/` free of imports from `src/cli/` and of Node built-ins. `byteLength` counts UTF-8 by code point so it needs neither `TextEncoder` nor `Buffer`.
+
+`toText` reads the markup this package generates, not arbitrary HTML. Do not grow it into a general parser. `measureSize` finds clipped parts by locating each part's output in the final document; a `compose` that rewrites part output can hide a part from that list.
+
+The Light / Dark preview pins `color-scheme` on the root of each previewed document with `withScheme`. A frame's own scheme follows the viewer's system setting, so relying on the iframe alone makes the toggle do nothing on a light system and makes "Light" turn dark on a dark one. Keep both frames, and keep the injected style after `<head>` or the doctype, never before it.
 
 ## Invariants
 

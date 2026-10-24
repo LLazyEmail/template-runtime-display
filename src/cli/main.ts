@@ -12,6 +12,10 @@ import { startServer } from './server';
 // Command line bootstrap. Everything it calls is tested; this file only wires them to the process.
 const command = parseArgs(process.argv.slice(2));
 const workerPath = fileURLToPath(new URL('./worker.js', import.meta.url));
+// A closed stdout (`... | head`) must not crash the run or change its exit code.
+process.stdout.on('error', (error: NodeJS.ErrnoException) => {
+  if (error.code !== 'EPIPE') throw error;
+});
 const log = (line: string): void => void process.stdout.write(`${line}\n`);
 
 switch (command.kind) {
@@ -33,11 +37,16 @@ switch (command.kind) {
     break;
 
   case 'inspect':
-    process.exitCode = await inspectCommand(resolve(command.file), command.out, {
-      render: (file) => forkRender(file, { workerPath }),
-      write: (file, contents) => writeFile(file, contents, 'utf8'),
-      log,
-    });
+    process.exitCode = await inspectCommand(
+      resolve(command.file),
+      command.out,
+      {
+        render: (file) => forkRender(file, { workerPath }),
+        write: (file, contents) => writeFile(file, contents, 'utf8'),
+        log,
+      },
+      command.json,
+    );
     break;
 
   case 'dev': {

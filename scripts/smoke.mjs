@@ -80,7 +80,12 @@ try {
   writeFileSync(bad, letter(`() => { throw new Error('boom'); }`));
 
   const runs = [
-    ['clean render exits 0', ['inspect', good, '--out', join(work, 'good.html')], 0, /smoke: ok/],
+    [
+      'clean render exits 0',
+      ['inspect', good, '--out', join(work, 'good.html'), '--json', join(work, 'good.json')],
+      0,
+      /smoke: ok/,
+    ],
     [
       'broken part exits 1',
       ['inspect', bad, '--out', join(work, 'bad.html')],
@@ -102,10 +107,30 @@ try {
       process.exit(1);
     }
   }
+  const trace = JSON.parse(read(join(work, 'good.json'), 'utf8'));
+  if (trace.templateId !== 'smoke' || trace.ok !== true || trace.size?.clipRisk !== 'ok') {
+    console.error('cli: --json did not write the trace');
+    process.exit(1);
+  }
   if (!read(join(work, 'bad.html'), 'utf8').includes('1 part broke')) {
     console.error('cli: the report did not name the broken part');
     process.exit(1);
   }
 } finally {
   rmSync(work, { recursive: true, force: true });
+}
+
+// The quality subpath loads from both builds and does its job.
+const esmQuality = await import('../dist/quality.js');
+const cjsQuality = require('../dist/quality.cjs');
+for (const [name, quality] of [
+  ['esm', esmQuality],
+  ['cjs', cjsQuality],
+]) {
+  const text = quality.toText('<h1>Hi</h1><p>One <a href="https://example.com">link</a></p>');
+  const size = quality.measureSize({ templateId: 't', ok: true, html: '€', parts: [] });
+  if (text !== 'HI\n\nOne link (https://example.com)\n' || size.bytes !== 3) {
+    console.error(`${name} quality build returned an unexpected result`);
+    process.exit(1);
+  }
 }

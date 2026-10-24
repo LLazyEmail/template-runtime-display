@@ -195,12 +195,24 @@ Safety: no `<script>`, no `<link>`, no network requests. Every id, message, titl
 
 Compares two `RenderResult`s. Parts match by id, so reordering alone is not a change. `RenderDiff` is `{ templateBefore, templateAfter, changed, parts: PartDiff[], lines: DiffLine[] }`. `PartDiff` is `{ id, change: 'added' | 'removed' | 'changed' | 'unchanged', statusBefore?, statusAfter?, charsDelta, lines }`. `DiffLine` is `{ kind: 'same' | 'add' | 'del', text }`. `changed` is true when the document or any part (HTML or status) differs. Very large diffs fall back to replacing the changed block. `formatDiff` prints changed parts, then changed lines with two lines of context.
 
+## measureSize(result, options?): SizeReport
+
+From `@llazyemail/template-runtime-display` and `@llazyemail/template-runtime-display/quality`. `options`: `{ limit?: number; nearLimit?: number }`, default 102 KB (`CLIP_BYTES`) and 80 KB (`NEAR_BYTES`). `SizeReport` is `{ bytes, limit, nearLimit, clipRisk: 'ok' | 'near' | 'over', perPart: { id, bytes }[], clippedParts: string[], unsubscribeClipped: boolean, warnings: string[] }`. `bytes` is the UTF-8 length of `result.html`. `perPart` lists parts with output, largest first. `clipRisk` is `over` above `limit`, `near` above `nearLimit`. `clippedParts` is filled only when `over`, with the parts whose output starts after the clip point. `unsubscribeClipped` is true when the first `unsubscribe` in the document is after it. `byteLength(text)` is the UTF-8 length of a string.
+
+## toText(html, options?): string
+
+`options`: `{ width?: number }`, default 78, `0` for no wrapping. Headings become uppercase, paragraphs are separated by a blank line, `<li>` becomes `- item`, `<a href="u">label</a>` becomes `label (u)` (or `u` when they match, or `label` when the href is empty, `#` or `javascript:`), `<img alt>` becomes `[alt]`. The `preheader` span is the first line. `<head>`, `<style>`, `<script>`, comments and `display:none` blocks are dropped. Entities are decoded. It reads the markup this package generates, not arbitrary HTML. Empty input gives `''`; otherwise the text ends with one newline.
+
+## traceJson(input, options?): TraceJson and traceJsonText(input, options?): string
+
+`input` is a `RenderResult` or a thrown `RenderError`. `options`: `{ html?: boolean }`. `TraceJson` is `{ templateId, ok, threw?: { partId, message }, composeError?, size: { bytes, limit, clipRisk, warnings }, parts: { id, status, chars, bytes, ms, error?, html? }[], html? }`. `traceJsonText` is the same as pretty JSON with a trailing newline. The shape is stable.
+
 ## CLI: template-runtime-display
 
 `bin` in `package.json`. Node-only, not part of the library entry point, and the library keeps no dependency on it.
 
-- `dev <module> [--port 4177] [--host 127.0.0.1] [--watch <dir>]...` serves the inspector at `/`, the bare document at `/email`, and reloads open pages when a file under the module's directory (or a `--watch` directory) changes. Each render runs in a fresh child process with a 10 second limit. Non-loopback `Host` headers get 403 when bound to loopback.
-- `inspect <module> [--out inspect.html]` renders once, prints `explain`, writes the report. Exit `0` ok, `1` a part broke or a throw, `2` the module could not be rendered.
+- `dev <module> [--port 4177] [--host 127.0.0.1] [--watch <dir>]...` serves the inspector at `/`, the bare document at `/email`, the trace at `/trace.json` (404 when the module could not be rendered), and reloads open pages when a file under the module's directory (or a `--watch` directory) changes. Each render runs in a fresh child process with a 10 second limit. Non-loopback `Host` headers get 403 when bound to loopback.
+- `inspect <module> [--out inspect.html] [--json trace.json]` renders once, prints `explain`, writes the report, and with `--json` the trace. Exit `0` ok, `1` a part broke or a throw, `2` the module could not be rendered. A crash writes `{ ok: false, crash: { message, detail? } }` to the JSON file. A closed stdout does not crash it.
 
 The module exports `template` (`EmailTemplate` input or `Template<EmailProps>`), and optionally `props` and `options` (`RenderOptions`). A default export with those keys also works. The CLI uses `onError: 'collect'` unless `options.onError` says otherwise.
 

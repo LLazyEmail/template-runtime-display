@@ -9,6 +9,7 @@ import { URL } from 'node:url';
 import type { RenderError } from '@llazyemail/render-template';
 import type { RenderResult } from '../runtime/types';
 import type { Outcome } from './outcome';
+import { traceJsonText } from '../inspect/json';
 import { outcomePage, renderChanged, toInspectable } from './pages';
 
 export interface DevServerOptions {
@@ -99,7 +100,7 @@ export function startServer(options: DevServerOptions): Promise<DevServer> {
       return;
     }
 
-    if (path !== '/' && path !== '/email') {
+    if (path !== '/' && path !== '/email' && path !== '/trace.json') {
       send(res, 404, 'text/plain', 'Not found');
       return;
     }
@@ -113,6 +114,21 @@ export function startServer(options: DevServerOptions): Promise<DevServer> {
 
     if (path === '/') {
       send(res, 200, 'text/html', withReload(outcomePage(outcome, previous)));
+      return;
+    }
+
+    // `/trace.json` is the render as data, for scripts and other tools.
+    if (path === '/trace.json') {
+      if (!inspectable) {
+        send(
+          res,
+          404,
+          'text/plain',
+          'No trace: the module could not be rendered. Open / to see why.',
+        );
+        return;
+      }
+      send(res, 200, 'application/json', traceJsonText(inspectable));
       return;
     }
 

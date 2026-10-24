@@ -14,6 +14,7 @@ export default defineConfig({
         'src/runtime/types.ts',
         'src/templates/email/types.ts',
         'src/templates/document/index.ts',
+        'src/quality/index.ts',
         // Process entry points. scripts/smoke.mjs runs them from the build.
         'src/cli/main.ts',
         'src/cli/worker.ts',
