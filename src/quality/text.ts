@@ -96,10 +96,15 @@ export function toText(html: string, options: TextOptions = {}): string {
     /<span[^>]*class\s*=\s*["'][^"']*\bpreheader\b[^"']*["'][^>]*>([\s\S]*?)<\/span>/i.exec(html);
   const first = preheader?.[1] === undefined ? '' : decodeEntities(stripTags(preheader[1]));
 
-  let body = html
-    .replace(/<!--[\s\S]*?-->/g, '')
-    .replace(/<(head|style|script)\b[\s\S]*?<\/\1>/gi, '')
-    .replace(/<(div|span|p|td|table|tr)\b[^>]*display\s*:\s*none[^>]*>[\s\S]*?<\/\1>/gi, '');
+  let body = html;
+  let previous: string;
+  do {
+    previous = body;
+    body = body
+      .replace(/<!--[\s\S]*?-->/g, '')
+      .replace(/<(head|style|script)\b[\s\S]*?<\/\1>/gi, '')
+      .replace(/<(div|span|p|td|table|tr)\b[^>]*display\s*:\s*none[^>]*>[\s\S]*?<\/\1>/gi, '');
+  } while (body !== previous);
 
   body = body
     .replace(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi, (_match, attrs: string, inner: string) => {
