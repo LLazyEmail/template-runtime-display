@@ -1,4 +1,5 @@
 import type { RenderResult } from '../runtime/types';
+import { darkModeContrast } from './contrast';
 
 export type Severity = 'error' | 'warn' | 'info';
 
@@ -29,6 +30,7 @@ const BUILTIN: readonly Rule[] = [
   linkHygiene,
   htmlLangAndTitle,
   unsubscribePresent,
+  darkModeContrast,
 ];
 
 /** Run the built-in client-compatibility rules and any extras. */
