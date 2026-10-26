@@ -12,7 +12,9 @@ Shipped (see [docs/inspector.md](./inspector.md)):
 
 Shipped: `lintEmail` with the first rules (`no-flex-grid-layout`, `no-external-stylesheet`, `no-script-or-form`, `img-needs-alt-and-size`, `link-hygiene`, `html-lang-and-title`, `unsubscribe-present`).
 
-Still to do: dark-mode contrast and image rules, `renderEmail(..., { check: true })` and `result.quality`, `inspect --fail-on`, and findings in the inspector.
+Shipped: `dark-mode-contrast` (WCAG AA on inline color/background pairs).
+
+Still to do: dark-mode image rules, `renderEmail(..., { check: true })` and `result.quality`, `inspect --fail-on`, and findings in the inspector.
 
 Decisions made while building the first slice:
 
