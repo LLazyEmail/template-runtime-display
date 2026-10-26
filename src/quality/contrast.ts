@@ -31,8 +31,9 @@ function expandHex(hex: string): string {
 function hexFromStyle(style: string, prop: string): string | undefined {
   const re = new RegExp(`${prop}\\s*:\\s*(#[0-9a-f]{3,8})`, 'i');
   const m = re.exec(style);
-  if (!m) return undefined;
-  return expandHex(m[1]);
+  const hex = m?.[1];
+  if (!hex) return undefined;
+  return expandHex(hex);
 }
 
 /**
@@ -44,7 +45,7 @@ export function darkModeContrast(result: RenderResult): Finding[] {
   const re = /style\s*=\s*["']([^"']*)["']/gi;
   for (const part of result.parts) {
     for (const match of part.html.matchAll(re)) {
-      const style = match[1];
+      const style = match[1] ?? '';
       const color = hexFromStyle(style, 'color');
       const bg = hexFromStyle(style, 'background(?:-color)?');
       if (!color || !bg) continue;

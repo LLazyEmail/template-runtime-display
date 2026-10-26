@@ -29,8 +29,8 @@ describe('darkModeContrast', () => {
       result([part('card', '<div style="color:#777; background:#888">low</div>')]),
     );
     expect(findings).toHaveLength(1);
-    expect(findings[0].rule).toBe('dark-mode-contrast');
-    expect(findings[0].partId).toBe('card');
+    expect(findings[0]?.rule).toBe('dark-mode-contrast');
+    expect(findings[0]?.partId).toBe('card');
   });
 
   it('passes a high-contrast pair', () => {
