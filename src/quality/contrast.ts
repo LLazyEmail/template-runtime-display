@@ -45,7 +45,7 @@ export function darkModeContrast(result: RenderResult): Finding[] {
   const re = /style\s*=\s*["']([^"']*)["']/gi;
   for (const part of result.parts) {
     for (const match of part.html.matchAll(re)) {
-      const style = match[1] ?? '';
+      const style = match[1]!; // group 1 always matches
       const color = hexFromStyle(style, 'color');
       const bg = hexFromStyle(style, 'background(?:-color)?');
       if (!color || !bg) continue;
