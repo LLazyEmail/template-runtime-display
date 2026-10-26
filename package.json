@@ -1,6 +1,6 @@
 {
   "name": "@llazyemail/template-runtime-display",
-  "version": "1.1.2",
+  "version": "1.2.1",
   "description": "Standalone runtime that renders a whole HTML email from named parts, shows which part broke, and ships a live inspector.",
   "type": "module",
   "license": "MIT",
