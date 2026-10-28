@@ -1,3 +1,3 @@
-# Claude
+# CLAUDE.md
 
-Follow [AGENTS.md](./AGENTS.md). That file is the source of truth for commands, layout, and how to add a fragment.
+See [AGENTS.md](AGENTS.md) — the single source of guidance for AI agents in this repo.

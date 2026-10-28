@@ -165,3 +165,13 @@ A new email region that is not a fragment belongs in `defineEmailTemplate` only 
 ## When to use this package
 
 Use it to render a whole HTML email, to run a batch of templates that share one props type, and to see which part broke. Use `defineTemplate` when the document is not the email shell. For MJML, a CSS inliner, or a React email renderer, use a different package in the LLazyEmail org.
+
+## Conventions
+
+- Small, single-purpose PRs; open them as **draft** first.
+- Commit trailer when working for the maintainer:
+  `Co-authored-by: petroved <arthur.tkachenko.netweight@gmail.com>`
+- Node: `engines.node` is `>=24`. CI runs on Node 24 and newer (currently 24 and 26).
+- Do not lower coverage thresholds or `noUncheckedIndexedAccess`.
+- Docs: extend or annotate outdated guidance; do not delete existing docs content.
+- Release: GitHub Release (or manual `publish.yml`) publishes to GitHub Packages under `@llazyemail`.
