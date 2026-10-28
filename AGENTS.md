@@ -175,4 +175,3 @@ Use it to render a whole HTML email, to run a batch of templates that share one 
 - Do not lower coverage thresholds or `noUncheckedIndexedAccess`.
 - Docs: extend or annotate outdated guidance; do not delete existing docs content.
 - Release: GitHub Release (or manual `publish.yml`) publishes to GitHub Packages under `@llazyemail`.
-
