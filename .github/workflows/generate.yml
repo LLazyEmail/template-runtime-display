@@ -1,6 +1,6 @@
 # Generate the sample HTML letter and upload it.
 # Install, index, artifact, and pull-request comment come from
-# LLazyEmail/email-template-workflows@v2.0.0. npm run generate still builds
+# LLazyEmail/email-template-workflows@v2.5.0. npm run generate still builds
 # and writes generated/letter.html.
 
 name: Generate
@@ -28,7 +28,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: LLazyEmail/email-template-workflows@v2.3.0
+      - uses: LLazyEmail/email-template-workflows@v2.5.0
         with:
           working-directory: .
           package-manager: npm
