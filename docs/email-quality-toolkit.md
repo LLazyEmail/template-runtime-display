@@ -14,7 +14,9 @@ Shipped: `lintEmail` with the first rules (`no-flex-grid-layout`, `no-external-s
 
 Shipped: `dark-mode-contrast` (WCAG AA on inline color/background pairs).
 
-Still to do: dark-mode image rules, `renderEmail(..., { check: true })` and `result.quality`, `inspect --fail-on`, and findings in the inspector.
+Shipped: `renderEmail(..., { check: true })` attaches `result.quality` (findings, size, plain text). Default output stays byte-identical.
+
+Still to do: dark-mode image rules, `inspect --fail-on`, and findings in the inspector.
 
 Decisions made while building the first slice:
 

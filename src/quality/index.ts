@@ -5,3 +5,5 @@ export type { TextOptions } from './text';
 export { lintEmail } from './lint';
 export type { Finding, LintOptions, Rule, Severity } from './lint';
 export { contrastRatio, darkModeContrast } from './contrast';
+export { qualityReport } from './report';
+export type { QualityReport } from './report';

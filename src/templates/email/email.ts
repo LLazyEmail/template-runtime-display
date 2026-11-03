@@ -1,4 +1,5 @@
 import type { RenderOptions } from '@llazyemail/render-template';
+import { qualityReport, type QualityReport } from '../../quality/report';
 import { footer } from '../footer/footer';
 import { head } from '../head/head';
 import { main } from '../main/main';
@@ -43,14 +44,27 @@ export function defineEmailTemplate(input: EmailTemplate): Template<EmailProps> 
   });
 }
 
+export interface EmailRenderOptions extends RenderOptions<EmailProps> {
+  /** When true, attach a `quality` report (findings, size, plain text). Default output stays identical. */
+  check?: boolean;
+}
+
+export interface EmailRenderResult extends RenderResult {
+  quality?: QualityReport;
+}
+
 /** Render an email template input, or a template already built with `defineEmailTemplate`. */
 export function renderEmail(
   template: EmailTemplate | Template<EmailProps>,
   props: EmailProps = {},
-  options?: RenderOptions<EmailProps>,
-): RenderResult {
+  options?: EmailRenderOptions,
+): EmailRenderResult {
   const defined = isTemplate(template) ? template : defineEmailTemplate(template);
-  return renderTemplate(defined, props, options);
+  const result = renderTemplate(defined, props, options);
+  if (options?.check) {
+    return { ...result, quality: qualityReport(result) };
+  }
+  return result;
 }
 
 function isTemplate(value: EmailTemplate | Template<EmailProps>): value is Template<EmailProps> {
