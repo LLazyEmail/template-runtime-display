@@ -1,6 +1,6 @@
 # Generate the sample HTML letter and upload it.
 # Install, index, artifact, and pull-request comment come from
-# LLazyEmail/email-template-workflows@v3 (main SHA until @v3 is tagged).
+# LLazyEmail/email-template-workflows@v3.
 # npm run generate still builds and writes generated/letter.html.
 # Explicit product-name/size-limit-kb restore the v2 email defaults that
 # changed in the v3 breaking release.
@@ -30,7 +30,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: LLazyEmail/email-template-workflows@205c017968bd23a59cb4ccbc7d436fccfed11e57 # v3 (main; no @v3 tag yet)
+      - uses: LLazyEmail/email-template-workflows@v3
         with:
           working-directory: .
           package-manager: npm
