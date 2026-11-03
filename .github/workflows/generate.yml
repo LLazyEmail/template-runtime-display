@@ -28,7 +28,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: LLazyEmail/email-template-workflows@v2.5.0
+      - uses: LLazyEmail/email-template-workflows@d033cc177f9fff39fd4baa74df0d2ea07e6a42cb # v2.5.0
         with:
           working-directory: .
           package-manager: npm
