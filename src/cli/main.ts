@@ -46,6 +46,7 @@ switch (command.kind) {
         log,
       },
       command.json,
+      command.failOn,
     );
     break;
 

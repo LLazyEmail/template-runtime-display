@@ -1,5 +1,7 @@
 import { RenderError } from '@llazyemail/render-template';
+import type { Finding } from '../quality/lint';
 import { byteLength, measureSize } from '../quality/size';
+import { findingsFor } from './findings';
 import { fromError } from '../runtime/result';
 import type { PartFailure, PartStatus, RenderResult } from '../runtime/types';
 
@@ -32,6 +34,8 @@ export interface TraceJson {
     clipRisk: 'ok' | 'near' | 'over';
     warnings: readonly string[];
   };
+  /** Email checks on the document. Empty when there is no document to check. */
+  findings: readonly Finding[];
   parts: readonly TraceJsonPart[];
   html?: string;
 }
@@ -61,6 +65,7 @@ export function traceJson(
       clipRisk: size.clipRisk,
       warnings: size.warnings,
     },
+    findings: findingsFor(result),
     parts: result.parts.map((part) => ({
       id: part.id,
       status: part.status,
