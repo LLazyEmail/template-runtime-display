@@ -60,3 +60,5 @@ export { toText } from './quality/text';
 export { qualityReport } from './quality/report';
 export type { QualityReport } from './quality/report';
 export type { TextOptions } from './quality/text';
+export { lintEmail } from './quality/lint';
+export type { Finding, LintOptions, Rule, Severity } from './quality/lint';

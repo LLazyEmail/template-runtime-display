@@ -212,7 +212,7 @@ From `@llazyemail/template-runtime-display` and `@llazyemail/template-runtime-di
 `bin` in `package.json`. Node-only, not part of the library entry point, and the library keeps no dependency on it.
 
 - `dev <module> [--port 4177] [--host 127.0.0.1] [--watch <dir>]...` serves the inspector at `/`, the bare document at `/email`, the trace at `/trace.json` (404 when the module could not be rendered), and reloads open pages when a file under the module's directory (or a `--watch` directory) changes. Each render runs in a fresh child process with a 10 second limit. Non-loopback `Host` headers get 403 when bound to loopback.
-- `inspect <module> [--out inspect.html] [--json trace.json]` renders once, prints `explain`, writes the report, and with `--json` the trace. Exit `0` ok, `1` a part broke or a throw, `2` the module could not be rendered. A crash writes `{ ok: false, crash: { message, detail? } }` to the JSON file. A closed stdout does not crash it.
+- `inspect <module> [--out inspect.html] [--json trace.json] [--fail-on error|warn]` renders once, prints `explain`, writes the report, and with `--json` the trace. Exit `0` ok, `1` a part broke, a throw, or (only with `--fail-on`) an email check found that severity or worse, `2` the module could not be rendered. A crash writes `{ ok: false, crash: { message, detail? } }` to the JSON file. A closed stdout does not crash it.
 
 The module exports `template` (`EmailTemplate` input or `Template<EmailProps>`), and optionally `props` and `options` (`RenderOptions`). A default export with those keys also works. The CLI uses `onError: 'collect'` unless `options.onError` says otherwise.
 

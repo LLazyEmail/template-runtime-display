@@ -32,6 +32,18 @@
       "groupName": "GitHub Actions (non-major)"
     },
     {
+      "description": "Group LLazyEmail/email-template-workflows Action updates and label them dependencies (no cross-repo CASCADE_TOKEN)",
+      "matchManagers": ["github-actions"],
+      "matchPackageNames": [
+        "LLazyEmail/email-template-workflows",
+        "llazyemail/email-template-workflows"
+      ],
+      "groupName": "email-template-workflows",
+      "labels": ["dependencies"],
+      "commitMessageTopic": "email-template-workflows",
+      "additionalBranchPrefix": "action-"
+    },
+    {
       "description": "Major updates stay manual (typescript v7, node majors, etc.)",
       "matchUpdateTypes": ["major"],
       "automerge": false
