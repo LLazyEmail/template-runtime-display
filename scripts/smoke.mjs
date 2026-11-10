@@ -93,6 +93,12 @@ try {
       /note error .*boom/,
     ],
     [
+      'email checks fail the run with --fail-on warn',
+      ['inspect', good, '--out', join(work, 'strict.html'), '--fail-on', 'warn'],
+      1,
+      /Failing because of --fail-on warn/,
+    ],
+    [
       'missing module exits 2',
       ['inspect', join(work, 'nope.mjs'), '--out', join(work, 'x.html')],
       2,

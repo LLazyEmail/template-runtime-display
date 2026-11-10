@@ -1,15 +1,17 @@
+import type { FailLevel } from '../inspect/findings';
+
 export type Command =
   | { kind: 'help' }
   | { kind: 'version' }
   | { kind: 'dev'; file: string; port: number; host: string; watch: string[] }
-  | { kind: 'inspect'; file: string; out: string; json?: string }
+  | { kind: 'inspect'; file: string; out: string; json?: string; failOn?: FailLevel }
   | { kind: 'error'; message: string };
 
 export const USAGE = `template-runtime-display: see which part of a template broke.
 
 Usage
   template-runtime-display dev <module> [--port 4177] [--host 127.0.0.1] [--watch <dir>]...
-  template-runtime-display inspect <module> [--out inspect.html] [--json trace.json]
+  template-runtime-display inspect <module> [--out inspect.html] [--json trace.json] [--fail-on error|warn]
 
   dev       Serve a live inspector. Saving the module, or anything it imports from
             a watched directory, reloads the page.
@@ -24,7 +26,9 @@ Options
   --host <h>     Interface for dev. Default 127.0.0.1 (this machine only).
   --watch <dir>  Also watch this directory. Repeatable.
   --out <file>   Where inspect writes the report. Default inspect.html.
-  --json <file>  Also write the trace as JSON: status, size and timing per part.
+  --json <file>  Also write the trace as JSON: status, size, timing and findings.
+  --fail-on <l>  inspect exits 1 when an email check finds this severity or worse:
+                 error or warn. Default: findings never fail the run.
   -h, --help     Show this help.
   -v, --version  Show the version.
 `;
@@ -49,6 +53,7 @@ export function parseArgs(argv: readonly string[]): Command {
   let host = '127.0.0.1';
   let out = 'inspect.html';
   let json: string | undefined;
+  let failOn: FailLevel | undefined;
   const watch: string[] = [];
 
   for (let i = 0; i < rest.length; i += 1) {
@@ -63,11 +68,16 @@ export function parseArgs(argv: readonly string[]): Command {
 
     const eq = arg.indexOf('=');
     const flag = eq === -1 ? arg : arg.slice(0, eq);
-    const allowed = name === 'dev' ? ['--port', '--host', '--watch'] : ['--out', '--json'];
+    const allowed =
+      name === 'dev' ? ['--port', '--host', '--watch'] : ['--out', '--json', '--fail-on'];
     if (!allowed.includes(flag)) return fail(`Unknown option "${flag}" for ${name}.`);
 
     const value = eq === -1 ? rest[(i += 1)] : arg.slice(eq + 1);
     if (value === undefined || value === '') return fail(`Option ${flag} needs a value.`);
+
+    if (flag === '--fail-on' && value !== 'error' && value !== 'warn') {
+      return fail(`Invalid --fail-on "${value}". Use error or warn.`);
+    }
 
     if (flag === '--port') {
       const parsed = Number(value);
@@ -81,6 +91,8 @@ export function parseArgs(argv: readonly string[]): Command {
       watch.push(value);
     } else if (flag === '--json') {
       json = value;
+    } else if (flag === '--fail-on') {
+      failOn = value as FailLevel;
     } else {
       out = value;
     }
@@ -89,5 +101,11 @@ export function parseArgs(argv: readonly string[]): Command {
   if (file === undefined) return fail(`${name} needs a module path. Example: ${name} ./letter.mjs`);
   return name === 'dev'
     ? { kind: 'dev', file, port, host, watch }
-    : { kind: 'inspect', file, out, ...(json === undefined ? {} : { json }) };
+    : {
+        kind: 'inspect',
+        file,
+        out,
+        ...(json === undefined ? {} : { json }),
+        ...(failOn === undefined ? {} : { failOn }),
+      };
 }

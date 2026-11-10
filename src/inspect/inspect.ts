@@ -2,10 +2,12 @@ import { RenderError } from '@llazyemail/render-template';
 import { fromError } from '../runtime/result';
 import type { PartStatus, PartTrace, RenderResult } from '../runtime/types';
 import { escapeHtml } from '../utils/escape';
+import type { Finding } from '../quality/lint';
 import { measureSize } from '../quality/size';
 import type { SizeReport } from '../quality/size';
 import { toText } from '../quality/text';
 import { diffRenders, trimContext } from './diff';
+import { findingsFor, sortFindings, summarizeFindings } from './findings';
 import type { DiffLine, RenderDiff } from './diff';
 import { withScheme } from './scheme';
 import { STYLES } from './styles';
@@ -15,6 +17,8 @@ export interface InspectOptions {
   title?: string;
   /** An earlier render of the same template. Adds a "what changed" section. */
   compareTo?: RenderResult | RenderError;
+  /** Findings to show. Default: run the built-in lint rules on the document. */
+  findings?: readonly Finding[];
 }
 
 /**
@@ -47,6 +51,7 @@ export function inspect(input: RenderResult | RenderError, options: InspectOptio
     header(result),
     failureBanner(result, thrown),
     timeline(result.parts),
+    findingsSection(result, options.findings ?? findingsFor(result)),
     diff ? diffSection(diff) : '',
     documentSection(result),
     sizeSection(result),
@@ -261,4 +266,42 @@ function textSection(result: RenderResult): string {
     '</details>',
     '</section>',
   ].join('\n');
+}
+
+const FINDING_CHIP: Record<Finding['severity'], string> = {
+  error: 's-error',
+  warn: 's-empty',
+  info: 's-skipped',
+};
+
+function findingsSection(result: RenderResult, findings: readonly Finding[]): string {
+  if (result.html === '') return '';
+  if (findings.length === 0) {
+    return '<section class="card"><h2>Findings</h2><p class="sizeline"><strong>No findings</strong> <span class="chip s-ok">ok</span></p><p class="note">The built-in email checks found nothing to fix.</p></section>';
+  }
+  const items = sortFindings(findings).map((finding) => findingItem(finding, result.parts));
+  return `<section class="card"><h2>Findings</h2><p class="sizeline"><strong>${escapeHtml(summarizeFindings(findings))}</strong></p><ul class="finds">${items.join('')}</ul></section>`;
+}
+
+function findingItem(finding: Finding, parts: readonly PartTrace[]): string {
+  const index = parts.findIndex((part) => part.id === finding.partId);
+  const where =
+    finding.partId === undefined
+      ? ''
+      : index === -1
+        ? ` <span class="meta">${escapeHtml(finding.partId)}</span>`
+        : ` <a class="meta" href="#part-${index}">${escapeHtml(finding.partId)}</a>`;
+  return [
+    '<li class="find">',
+    `<span class="chip ${FINDING_CHIP[finding.severity]}">${escapeHtml(finding.severity)}</span> <span class="name">${escapeHtml(finding.rule)}</span>${where}`,
+    `<p class="fmsg">${escapeHtml(finding.message)}</p>`,
+    finding.fix ? `<p class="fix">Fix: ${escapeHtml(finding.fix)}</p>` : '',
+    finding.clients?.length
+      ? `<p class="meta">Affects: ${escapeHtml(finding.clients.join(', '))}</p>`
+      : '',
+    finding.excerpt ? `<code class="ex">${escapeHtml(finding.excerpt)}</code>` : '',
+    '</li>',
+  ]
+    .filter((chunk) => chunk !== '')
+    .join('');
 }

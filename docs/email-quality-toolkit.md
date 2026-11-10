@@ -7,6 +7,7 @@ Shipped (see [docs/inspector.md](./inspector.md)):
 - [x] `toText(html)`: plain-text version
 - [x] `measureSize(result)`: UTF-8 size, Gmail 102 KB clip risk, parts hidden by the clip, unsubscribe-after-clip warning
 - [x] Inspector: size section, plain-text section, Light / Dark preview
+- [x] Inspector: findings section, `findings` in the JSON trace, `inspect --fail-on error|warn`
 - [x] `traceJson`, `inspect --json`, and `/trace.json`
 - [x] Subpath export `@llazyemail/template-runtime-display/quality`
 
@@ -14,7 +15,9 @@ Shipped: `lintEmail` with the first rules (`no-flex-grid-layout`, `no-external-s
 
 Shipped: `dark-mode-contrast` (WCAG AA on inline color/background pairs).
 
-Still to do: dark-mode image rules, `renderEmail(..., { check: true })` and `result.quality`, `inspect --fail-on`, and findings in the inspector.
+Still to do: dark-mode image rules, `renderEmail(..., { check: true })` and `result.quality`, and the remaining lint rules.
+
+`--fail-on` is opt-in (no default level), a deliberate change from the original proposal of defaulting to `error`: a default would turn existing green pipelines red on upgrade.
 
 Decisions made while building the first slice:
 
@@ -126,7 +129,7 @@ Gmail clips messages over ~102 KB of HTML, and the "View entire message" link hi
 - [ ] `renderEmail(..., { check: true })` returns `quality`; default output is byte-identical to today
 - [ ] Dark-mode contrast rule (the Light/Dark preview toggle is done)
 - [x] Size budget with UTF-8 bytes and footer-clipping warning
-- [ ] Inspector section for findings; CLI `--fail-on`
+- [x] Inspector section for findings; CLI `--fail-on`
 - [ ] README, AGENTS.md, llms.txt, llms-full.txt updated; `npm run check` green
 
 ### Suggested order
