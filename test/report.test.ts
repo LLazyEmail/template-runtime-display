@@ -33,7 +33,9 @@ describe('renderEmail check option', () => {
     const checked = renderEmail({ id: 'demo', parts: [] }, props, { check: true });
     expect(plain.quality).toBeUndefined();
     expect(plain.html).toBe(checked.html);
-    expect(plain.parts).toEqual(checked.parts);
+    // Timing fields may differ between renders; compare everything else.
+    const withoutTiming = (parts: typeof plain.parts) => parts.map(({ ms: _ms, ...rest }) => rest);
+    expect(withoutTiming(plain.parts)).toEqual(withoutTiming(checked.parts));
   });
 
   it('works with a pre-defined template', () => {
