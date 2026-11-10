@@ -57,6 +57,8 @@ export type { XhtmlDocumentProps } from './templates/document';
 export { byteLength, measureSize, CLIP_BYTES, NEAR_BYTES } from './quality/size';
 export type { ClipRisk, PartSize, SizeOptions, SizeReport } from './quality/size';
 export { toText } from './quality/text';
+export { qualityReport } from './quality/report';
+export type { QualityReport } from './quality/report';
 export type { TextOptions } from './quality/text';
 export { lintEmail } from './quality/lint';
 export type { Finding, LintOptions, Rule, Severity } from './quality/lint';

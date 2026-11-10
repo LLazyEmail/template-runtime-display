@@ -15,7 +15,9 @@ Shipped: `lintEmail` with the first rules (`no-flex-grid-layout`, `no-external-s
 
 Shipped: `dark-mode-contrast` (WCAG AA on inline color/background pairs).
 
-Still to do: dark-mode image rules, `renderEmail(..., { check: true })` and `result.quality`, and the remaining lint rules.
+Shipped: `renderEmail(..., { check: true })` attaches `result.quality` (findings, size, plain text). Default output stays byte-identical.
+
+Still to do: dark-mode image rules and the remaining lint rules.
 
 `--fail-on` is opt-in (no default level), a deliberate change from the original proposal of defaulting to `error`: a default would turn existing green pipelines red on upgrade.
 
