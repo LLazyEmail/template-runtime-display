@@ -64,6 +64,7 @@ src/utils/escape.ts               escapeHtml()
 src/utils/pickDefined.ts          drop omitted string fields
 src/runtime/result.ts             fromError(): a thrown RenderError as a failed result
 src/inspect/inspect.ts            inspect(): self-contained HTML report
+src/inspect/findings.ts           findingsFor, sortFindings, failingFindings, summarizeFindings
 src/inspect/diff.ts               diffRenders, formatDiff, line diff
 src/inspect/styles.ts             inspector stylesheet
 src/inspect/scheme.ts             withScheme: pin color-scheme on a previewed document

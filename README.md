@@ -5,6 +5,7 @@ Render a whole HTML email from named parts, then **see exactly which part broke*
 ```bash
 npx template-runtime-display dev ./letter.mjs     # live inspector, reloads on save
 npx template-runtime-display inspect ./letter.mjs # one-shot HTML report, exit 1 if a part broke
+npx template-runtime-display inspect ./letter.mjs --fail-on error # also exit 1 on email-check errors
 ```
 
 [![CI](https://github.com/LLazyEmail/template-runtime-display/actions/workflows/ci.yml/badge.svg)](https://github.com/LLazyEmail/template-runtime-display/actions/workflows/ci.yml)
@@ -20,7 +21,7 @@ Requires **Node.js 24+**. No runtime dependencies. No template registry. Strings
 
 ## Inspector
 
-The inspector turns a render into one self-contained HTML page: a verdict, a banner naming each broken part, output size and timing per part, every part's HTML next to a sandboxed preview, and the finished document at Full, Tablet 768 and Mobile 375. The page has no scripts and makes no network requests. Part HTML only appears inside `sandbox=""` frames and escaped blocks, so a hostile part cannot run code in the report.
+The inspector turns a render into one self-contained HTML page: a verdict, a banner naming each broken part, output size and timing per part, every part's HTML next to a sandboxed preview, email-check findings linked to the part that caused them, and the finished document at Full, Tablet 768 and Mobile 375. The page has no scripts and makes no network requests. Part HTML only appears inside `sandbox=""` frames and escaped blocks, so a hostile part cannot run code in the report.
 
 ### Live: `dev`
 

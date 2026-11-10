@@ -53,7 +53,7 @@ formatDiff(diffRenders(before, after)); // string for a terminal
 
 ```bash
 template-runtime-display dev ./letter.mjs [--port 4177] [--host 127.0.0.1] [--watch dir]
-template-runtime-display inspect ./letter.mjs [--out inspect.html]   # exit 0 ok, 1 part broke, 2 could not render
+template-runtime-display inspect ./letter.mjs [--out inspect.html] [--fail-on error|warn]   # exit 0 ok, 1 part broke or email checks failed, 2 could not render
 ```
 
 The module exports `template`, and optionally `props` and `options`. The CLI defaults `onError` to `collect`.
@@ -69,4 +69,4 @@ toText(result.html); // plain-text alternative, wrapped at 78 columns
 traceJson(result); // status, bytes and ms per part, errors, size check
 ```
 
-`bytes` is UTF-8, which is what Gmail counts against its ~102 KB clip. `inspect --json trace.json` writes the trace, and the dev server serves it at `/trace.json`. The report shows size, the plain-text version, and a Light / Dark preview. Guide: docs/inspector.md.
+`bytes` is UTF-8, which is what Gmail counts against its ~102 KB clip. `inspect --json trace.json` writes the trace, and the dev server serves it at `/trace.json`. The report shows email-check findings (`lintEmail`, also `findings` in the trace), size, the plain-text version, and a Light / Dark preview. Guide: docs/inspector.md.

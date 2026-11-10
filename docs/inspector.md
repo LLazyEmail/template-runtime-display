@@ -6,6 +6,7 @@ The inspector shows what a render did: which part ran, what each one produced, w
 - [Live dev server](#live-dev-server)
 - [One-shot report for CI](#one-shot-report-for-ci)
 - [JSON trace](#json-trace)
+- [Email checks](#email-checks)
 - [Size check](#size-check)
 - [Plain-text version](#plain-text-version)
 - [Light and Dark preview](#light-and-dark-preview)
@@ -21,6 +22,7 @@ The inspector shows what a render did: which part ran, what each one produced, w
 | Header                     | Template id, `OK` or `FAILED`, part count, size, total time, slowest part                                                                 |
 | Banner                     | Each broken part with its error, or the compose error, or the part that threw. Links to the part card.                                    |
 | Output by part             | A bar per part sized by its output, with status, characters and time                                                                      |
+| Findings                   | Email checks on the finished document, most severe first: rule, part (linked), message, fix, affected clients, and the offending markup   |
 | Changes (with `compareTo`) | Which parts changed since an earlier render, and the changed lines                                                                        |
 | Document                   | The finished email in a sandboxed frame at Full, Tablet 768 and Mobile 375, in Light or Dark                                              |
 | Size                       | Bytes against the Gmail clip limit, a meter, the largest parts, and warnings                                                              |
@@ -59,6 +61,12 @@ npx template-runtime-display inspect ./letter.mjs --out report.html --json trace
 | `1`       | A part broke, or the render threw                                       |
 | `2`       | The module could not be rendered (syntax error, no `template`, timeout) |
 
+Add `--fail-on error` (or `warn`) to also exit `1` when the email checks find that severity or worse in a render whose parts all worked. Without it, findings are reported but never fail the run, so existing pipelines keep passing.
+
+```bash
+npx template-runtime-display inspect ./letter.mjs --fail-on error
+```
+
 Both files are written in every case, so CI can upload them as artifacts. A crash writes `{ "ok": false, "crash": { "message", "detail"? } }` to the JSON file so a script can always read it. A closed pipe (`... | head`) does not crash the CLI or change its exit code.
 
 ## JSON trace
@@ -70,6 +78,9 @@ Both files are written in every case, so CI can upload them as artifacts. A cras
   "templateId": "weekly-digest",
   "ok": false,
   "size": { "bytes": 993, "limit": 104448, "clipRisk": "ok", "warnings": [] },
+  "findings": [
+    { "rule": "unsubscribe-present", "severity": "warn", "message": "...", "fix": "..." }
+  ],
   "parts": [
     { "id": "head", "status": "ok", "chars": 447, "bytes": 447, "ms": 0.02 },
     {
@@ -85,6 +96,17 @@ Both files are written in every case, so CI can upload them as artifacts. A cras
 ```
 
 `threw: { partId, message }` is present when the render threw, and `composeError` when `compose` failed. Pass `{ html: true }` to include each part's markup and the document. `bytes` is the UTF-8 size, which is what mail clients count; `chars` is `.length`.
+
+## Email checks
+
+The report and the JSON trace run the built-in lint rules (`lintEmail`) on the finished document: flex or grid layout, external stylesheets, scripts and forms, images without alt text or size, link hygiene, `lang` and `title`, and a missing unsubscribe link. A render with no document has nothing to check, so it has no findings.
+
+```ts
+import { inspect, lintEmail } from '@llazyemail/template-runtime-display';
+
+inspect(result); // runs the rules for you
+inspect(result, { findings: lintEmail(result, { off: ['link-hygiene'] }) }); // or bring your own
+```
 
 ## Size check
 
@@ -159,5 +181,5 @@ console.log(formatDiff(diffRenders(before, after)));
 ## What it does not do
 
 - It does not render in real mail clients. The preview is your browser. Outlook for Windows renders with Word and will differ.
-- It does not lint markup for client compatibility yet. That is the next piece of the [email quality toolkit](./email-quality-toolkit.md).
+- The checks are static. They read the markup, they do not run a mail client. More rules are planned in the [email quality toolkit](./email-quality-toolkit.md).
 - The dev server renders one module. It is a development tool, not a production server.
