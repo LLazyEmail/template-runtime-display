@@ -91,7 +91,7 @@ console.log(formatDiff(diffRenders(before, after)));
 
 ## Package ecosystem and Lit
 
-This package builds on `@llazyemail/render-template` (currently pinned via GitHub ref `github:LLazyEmail/render-template#0.3.0` in `package.json`). Prefer a published version from GitHub Packages when one is available and compatible, to reduce install fragility.
+This package builds on `@llazyemail/render-template`, installed as the published `^0.3.0` package from GitHub Packages (see `package.json`). It used to be pinned to the git ref `github:LLazyEmail/render-template#0.3.0`, which made npm run render-template's `prepare` (TypeScript build) on every install. The published package ships a prebuilt `dist/`, so nothing is compiled on install.
 
 Parts must return **strings**. Lit `TemplateResult`s are not supported inside parts.
 
@@ -101,7 +101,7 @@ Generation/catalog/write logic belongs in `@llazyemail/generate-template`, not h
 
 ## Install
 
-Published to GitHub Packages. Copy [`.npmrc.example`](./.npmrc.example) to `.npmrc` in the consuming project. `GITHUB_TOKEN` needs `read:packages`.
+Published to GitHub Packages. Copy [`.npmrc.example`](./.npmrc.example) to `.npmrc` in the consuming project and set `NODE_AUTH_TOKEN` to a GitHub token with `read:packages`. The same `@llazyemail` scope line also resolves the `@llazyemail/render-template` dependency, so no extra setup is needed for it.
 
 ```bash
 npm install @llazyemail/template-runtime-display
@@ -193,6 +193,8 @@ Omitted strings render empty. The button is present only when both `ctaLabel` an
 Subpath exports: `@llazyemail/template-runtime-display/escape`, `/head`, `/body`, `/main`, and `/document`.
 
 ## Scripts
+
+Working on this repo needs the same registry setup as consuming it, because `@llazyemail/render-template` comes from GitHub Packages: copy `.npmrc.example` to `.npmrc` (do not commit it) and export `NODE_AUTH_TOKEN` with `read:packages`. In CI, `actions/setup-node` writes that config and the workflows pass `secrets.GITHUB_TOKEN` with `packages: read`.
 
 ```bash
 npm install

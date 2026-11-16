@@ -157,7 +157,7 @@
     "live-reload"
   ],
   "dependencies": {
-    "@llazyemail/render-template": "github:LLazyEmail/render-template#0.3.0",
+    "@llazyemail/render-template": "^0.3.0",
     "markup-generator": "^4.1.0"
   }
 }
