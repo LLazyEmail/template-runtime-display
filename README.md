@@ -11,7 +11,7 @@ npx template-runtime-display inspect ./letter.mjs --fail-on error # also exit 1 
 [![CI](https://github.com/LLazyEmail/template-runtime-display/actions/workflows/ci.yml/badge.svg)](https://github.com/LLazyEmail/template-runtime-display/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Requires **Node.js 24+**. No runtime dependencies. No template registry. Strings you pass are interpolated as HTML.
+Requires **Node.js 24+**. One runtime dependency, [`@llazyemail/render-template`](https://github.com/LLazyEmail/render-template), which supplies the part/compose runtime and `RenderError` (see [Dependencies](#dependencies)). No template registry. Strings you pass are interpolated as HTML.
 
 - Agent guide: [AGENTS.md](./AGENTS.md)
 - Short index: [llms.txt](./llms.txt)
@@ -91,7 +91,14 @@ console.log(formatDiff(diffRenders(before, after)));
 
 ## Package ecosystem and Lit
 
-This package builds on `@llazyemail/render-template` (currently pinned via GitHub ref `github:LLazyEmail/render-template#0.3.0` in `package.json`). Prefer a published version from GitHub Packages when one is available and compatible, to reduce install fragility.
+### Dependencies
+
+| Package                       | Where             | Why                                                                                                                                                    |
+| ----------------------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `@llazyemail/render-template` | `dependencies`    | The part/compose runtime. `RenderError`, `RenderOptions`, `RenderJob` and `renderMany` come from it and are re-exported. Installed for every consumer. |
+| `markup-generator`            | `devDependencies` | Only used by `test/write.test.ts` and `npm run generate` (`scripts/generate.mjs`) to write rendered HTML to disk. Not installed for consumers.         |
+
+`@llazyemail/render-template` is currently pinned via the GitHub ref `github:LLazyEmail/render-template#0.3.0` in `package.json`. Prefer a published version from GitHub Packages when one is available and compatible, to reduce install fragility.
 
 Parts must return **strings**. Lit `TemplateResult`s are not supported inside parts.
 

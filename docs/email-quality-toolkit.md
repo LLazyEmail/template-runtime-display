@@ -112,7 +112,7 @@ Gmail clips messages over ~102 KB of HTML, and the "View entire message" link hi
 
 ### Constraints (from AGENTS.md)
 
-- Zero runtime dependencies: HTML is scanned with small tokenizers and regexes over the markup we generate, not a DOM library. Document that this is a linter for emails (mostly table markup and inline styles), not a general HTML parser, and keep a list of known blind spots in the README.
+- No new runtime dependencies (the package already depends only on `@llazyemail/render-template`): HTML is scanned with small tokenizers and regexes over the markup we generate, not a DOM library. Document that this is a linter for emails (mostly table markup and inline styles), not a general HTML parser, and keep a list of known blind spots in the README.
 - No template registry. Rules are an array of functions passed in.
 - `escapeHtml` is still not applied to props. The linter should _report_ unescaped `<` and `&` in text positions rather than fixing them.
 - 100% coverage on new executable files.
