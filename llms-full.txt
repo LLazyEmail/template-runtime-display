@@ -1,7 +1,7 @@
 # @llazyemail/template-runtime-display API
 
 Package: `@llazyemail/template-runtime-display`.
-Node 24+. Named exports only. No default export. No runtime dependencies. No template registry.
+Node 24+. Named exports only. No default export. One runtime dependency (`@llazyemail/render-template`). No template registry.
 Import the package root. Builds: ESM `dist/index.js`, CJS `dist/index.cjs`, browser IIFE `dist/index.global.js` (global `TemplateRuntimeDisplay`), types `dist/index.d.ts`.
 
 The runtime is synchronous and stateless. Callers own templates. The same template, props, and slots return the same HTML, including whitespace. Trace `ms` may differ. Omitted optional strings become `''`. Rendered HTML does not contain the word `undefined`. Prop values and slot strings are concatenated as HTML with no escape step.

@@ -1,6 +1,6 @@
 # Agent notes for template-runtime-display
 
-`@llazyemail/template-runtime-display` is a stateless runtime that renders a whole HTML email from named parts, plus the fragment functions those parts call. No DOM, no I/O, no runtime dependencies. Custom code is just another part. When a part throws, the trace names it.
+`@llazyemail/template-runtime-display` is a stateless runtime that renders a whole HTML email from named parts, plus the fragment functions those parts call. No DOM, no I/O. Its only runtime dependency is `@llazyemail/render-template`. Custom code is just another part. When a part throws, the trace names it.
 
 The package is stateless, so loading the ESM and CJS builds in one process is safe.
 
@@ -150,7 +150,7 @@ The Light / Dark preview pins `color-scheme` on the root of each previewed docum
 - `head` always emits charset `utf-8`, the viewport meta, a `<title>`, and the hidden preview `<div>`.
 - Props and slots are interpolated raw. This package has no escape step. Keep it that way unless the task asks for escaping.
 - `bodyText`, `content`, and slot strings are allowed to contain HTML.
-- Zero runtime dependencies. Dev tooling stays in `devDependencies`.
+- One runtime dependency: `@llazyemail/render-template`. Do not add others. Dev tooling (including `markup-generator`, used only by tests and `scripts/generate.mjs`) stays in `devDependencies`.
 - Public types ship from `src/index.ts` through tsup `dts`. Keep `tsconfig` `types` empty so `@types/node` cannot leak into `.d.ts`.
 
 ## Add a fragment
