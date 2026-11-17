@@ -11,7 +11,7 @@ npx template-runtime-display inspect ./letter.mjs --fail-on error # also exit 1 
 [![CI](https://github.com/LLazyEmail/template-runtime-display/actions/workflows/ci.yml/badge.svg)](https://github.com/LLazyEmail/template-runtime-display/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Requires **Node.js 24+**. No runtime dependencies. No template registry. Strings you pass are interpolated as HTML.
+Requires **Node.js 24+**. One runtime dependency, [`@llazyemail/render-template`](https://github.com/LLazyEmail/render-template), which supplies the part/compose runtime and `RenderError` (see [Dependencies](#dependencies)). No template registry. Strings you pass are interpolated as HTML.
 
 - Agent guide: [AGENTS.md](./AGENTS.md)
 - Short index: [llms.txt](./llms.txt)
@@ -90,6 +90,13 @@ console.log(formatDiff(diffRenders(before, after)));
 `inspect(resultOrRenderError, { title?, compareTo? })` returns the page as a string. `diffRenders(before, after)` matches parts by id and returns a per-part and whole-document line diff. `formatDiff` prints it for a terminal.
 
 ## Package ecosystem and Lit
+
+### Dependencies
+
+| Package                       | Where             | Why                                                                                                                                                    |
+| ----------------------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `@llazyemail/render-template` | `dependencies`    | The part/compose runtime. `RenderError`, `RenderOptions`, `RenderJob` and `renderMany` come from it and are re-exported. Installed for every consumer. |
+| `markup-generator`            | `devDependencies` | Only used by `test/write.test.ts` and `npm run generate` (`scripts/generate.mjs`) to write rendered HTML to disk. Not installed for consumers.         |
 
 This package builds on `@llazyemail/render-template`, installed as the published `^0.3.0` package from GitHub Packages (see `package.json`). It used to be pinned to the git ref `github:LLazyEmail/render-template#0.3.0`, which made npm run render-template's `prepare` (TypeScript build) on every install. The published package ships a prebuilt `dist/`, so nothing is compiled on install.
 

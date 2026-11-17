@@ -1,6 +1,6 @@
 # @llazyemail/template-runtime-display
 
-> Stateless runtime that renders a whole HTML email from named parts and reports the part that broke. Ships an HTML inspector and a `template-runtime-display` CLI (`dev`, `inspect`). No runtime dependencies. Node 24+. Named exports only. No template registry.
+> Stateless runtime that renders a whole HTML email from named parts and reports the part that broke. Ships an HTML inspector and a `template-runtime-display` CLI (`dev`, `inspect`). One runtime dependency (`@llazyemail/render-template`). Node 24+. Named exports only. No template registry.
 
 - Repo: https://github.com/LLazyEmail/template-runtime-display
 - Registry: https://npm.pkg.github.com (scope `@llazyemail`)
