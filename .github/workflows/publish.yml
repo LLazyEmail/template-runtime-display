@@ -45,6 +45,8 @@ jobs:
 
       - name: Install
         run: npm ci --no-audit --no-fund
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Lint, format, typecheck, build, test
         run: |

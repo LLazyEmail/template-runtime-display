@@ -27,6 +27,8 @@ jobs:
       pull-requests: write
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # @llazyemail/render-template is installed from GitHub Packages.
+      NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -34,6 +36,8 @@ jobs:
         with:
           working-directory: .
           package-manager: npm
+          registry-url: https://npm.pkg.github.com
+          registry-scope: '@llazyemail'
           command: npm run generate
           artifact-directory: generated
           artifact-name: generated-html-templates

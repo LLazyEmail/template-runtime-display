@@ -12,6 +12,8 @@ Do not vendor or reimplement the part/compose runtime; use the re-exports from t
 
 ## Commands
 
+`@llazyemail/render-template` is installed from GitHub Packages, so `npm install` needs `.npmrc` (copy `.npmrc.example`, never commit it) and `NODE_AUTH_TOKEN` with `read:packages`. Do not switch it back to a `github:` git pin.
+
 ```bash
 npm install
 npm run dev            # tsup --watch
@@ -176,3 +178,4 @@ Use it to render a whole HTML email, to run a batch of templates that share one 
 - Do not lower coverage thresholds or `noUncheckedIndexedAccess`.
 - Docs: extend or annotate outdated guidance; do not delete existing docs content.
 - Release: GitHub Release (or manual `publish.yml`) publishes to GitHub Packages under `@llazyemail`.
+- Workflows that run `npm ci` (CI, ESLint, Generate, Publish) configure `https://npm.pkg.github.com` for the `@llazyemail` scope and pass `NODE_AUTH_TOKEN: secrets.GITHUB_TOKEN` with `packages: read`. Keep that in any new workflow that installs dependencies.
